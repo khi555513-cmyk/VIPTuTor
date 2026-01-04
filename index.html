@@ -3,7 +3,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Sửa lỗi Accessibility: Cho phép zoom và không giới hạn scale -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VIP English Tutor</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -19,7 +20,7 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
-        touch-action: pan-x pan-y;
+        touch-action: manipulation;
         -webkit-font-smoothing: antialiased;
       }
       ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -89,7 +90,8 @@
 </script>
 </head>
   <body class="bg-slate-50 text-slate-900 h-[100dvh] overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
-    <div id="root"></div>
+    <!-- Landmark chính cho Accessibility -->
+    <div id="root" role="main"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

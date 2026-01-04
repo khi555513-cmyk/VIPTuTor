@@ -16,10 +16,8 @@ import { TIER_LIMITS } from './constants';
 import { Menu } from 'lucide-react';
 
 const App: React.FC = () => {
-  // Ref to track if we are in the process of resetting data
   const isResettingRef = useRef(false);
 
-  // --- App Data State ---
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_sessions');
@@ -57,7 +55,6 @@ const App: React.FC = () => {
     }
   });
 
-  // Notifications State
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_notifications');
@@ -68,11 +65,9 @@ const App: React.FC = () => {
     }
   });
 
-  // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_profile');
-      // Default to 'basic' if not present or new user
       const defaultProfile: UserProfile = { 
         name: 'Bạn Học Viên', 
         joinDate: Date.now(), 
@@ -87,7 +82,6 @@ const App: React.FC = () => {
     }
   });
 
-  // Daily Usage State
   const [dailyUsage, setDailyUsage] = useState<DailyUsage>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_usage');
@@ -109,17 +103,11 @@ const App: React.FC = () => {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [fullScreenGameData, setFullScreenGameData] = useState<GameData | null>(null);
-
-  // Expiry Modal State
   const [showExpiryModal, setShowExpiryModal] = useState(false);
   const [expiredPackageName, setExpiredPackageName] = useState('');
-
-  // Limit Reached Modal State
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [limitModalMessage, setLimitModalMessage] = useState('');
 
-  // --- Effects for Persistence ---
-  // We check !isResettingRef.current to prevent writing stale data back to localStorage during a reset
   useEffect(() => {
     if (!isResettingRef.current) localStorage.setItem('vip_tutor_sessions', JSON.stringify(sessions));
   }, [sessions]);
@@ -140,34 +128,22 @@ const App: React.FC = () => {
     if (!isResettingRef.current) localStorage.setItem('vip_tutor_usage', JSON.stringify(dailyUsage));
   }, [dailyUsage]);
 
-  // --- HANDLER: Add Notification ---
   const handleAddNotification = (note: AppNotification) => {
     setNotifications(prev => [note, ...prev]);
   };
 
-  // --- WATCHDOG: Subscription Expiry Check ---
-  // Runs immediately and then every 30s to ensure real-time downgrade
   useEffect(() => {
     const checkExpiry = () => {
-      // Only check if not already basic and has an expiry date
       if (userProfile.accountTier !== 'basic' && userProfile.subscriptionExpiry) {
         if (Date.now() > userProfile.subscriptionExpiry) {
-          // EXPIRED! Downgrade immediately.
           const oldTierName = userProfile.accountTier === 'vip' ? 'VIP' : 'PRO';
-          
           setExpiredPackageName(oldTierName);
-          setShowExpiryModal(true); // TRIGGER BUBBLE MODAL
-
-          setUserProfile(prev => ({
-            ...prev,
-            accountTier: 'basic',
-            subscriptionExpiry: null
-          }));
-
+          setShowExpiryModal(true);
+          setUserProfile(prev => ({ ...prev, accountTier: 'basic', subscriptionExpiry: null }));
           handleAddNotification({
             id: Date.now().toString(),
             title: 'Hết hạn gói cước',
-            message: `Bạn đã sử dụng hết lưu lượng gói ${oldTierName}. Tài khoản đã tự động trở về gói Cơ Bản (giới hạn tính năng). Hãy đăng ký/gia hạn thêm để tiếp tục sử dụng các tính năng nâng cao.`,
+            message: `Gói ${oldTierName} của bạn đã hết hạn. Tài khoản đã quay về gói Cơ Bản.`,
             type: 'system',
             timestamp: Date.now(),
             isRead: false
@@ -175,47 +151,25 @@ const App: React.FC = () => {
         }
       }
     };
-
-    checkExpiry(); // Run once on mount/update
-    const interval = setInterval(checkExpiry, 30000); // Run every 30 seconds
+    checkExpiry();
+    const interval = setInterval(checkExpiry, 30000);
     return () => clearInterval(interval);
   }, [userProfile.subscriptionExpiry, userProfile.accountTier]);
 
-  // --- Logic for Limits & Usage ---
   const checkLimit = (type: 'message' | 'test' | 'game'): boolean => {
-    // 1. Double check tier expiry before allowing action
-    if (userProfile.subscriptionExpiry && userProfile.accountTier !== 'basic') {
-       if (Date.now() > userProfile.subscriptionExpiry) {
-          // It's expired, force basic logic (state update will happen via useEffect, but block this action now)
-          const basicLimits = TIER_LIMITS['basic'];
-          if (type === 'message' && dailyUsage.messagesCount >= basicLimits.messages) return false;
-          if (type === 'test' && dailyUsage.testsGenerated >= basicLimits.tests) return false;
-          if (type === 'game' && dailyUsage.gamesPlayed >= basicLimits.games) return false;
-          return true; // Technically if within basic limits, allow, but mostly it's a hard stop for premium features
-       }
-    }
-
     const tier = userProfile.accountTier;
     const limits = TIER_LIMITS[tier];
-
     if (type === 'message' && dailyUsage.messagesCount >= limits.messages) return false;
     if (type === 'test' && dailyUsage.testsGenerated >= limits.tests) return false;
     if (type === 'game' && dailyUsage.gamesPlayed >= limits.games) return false;
-
     return true;
   };
 
   const incrementUsage = (type: 'message' | 'test' | 'game') => {
     setDailyUsage(prev => {
       const today = new Date().toISOString().split('T')[0];
-      // If date changed mid-session
       if (prev.date !== today) {
-        return { 
-          date: today, 
-          messagesCount: type === 'message' ? 1 : 0, 
-          testsGenerated: type === 'test' ? 1 : 0, 
-          gamesPlayed: type === 'game' ? 1 : 0 
-        };
+        return { date: today, messagesCount: type === 'message' ? 1 : 0, testsGenerated: type === 'test' ? 1 : 0, gamesPlayed: type === 'game' ? 1 : 0 };
       }
       return {
         ...prev,
@@ -226,264 +180,93 @@ const App: React.FC = () => {
     });
   };
 
-  // --- Handlers (Existing) ---
-  const getCurrentMessages = () => {
-    return sessions.find(s => s.id === currentSessionId)?.messages || [];
-  };
+  const getCurrentMessages = () => sessions.find(s => s.id === currentSessionId)?.messages || [];
 
   const setMessages = (updateFn: React.SetStateAction<Message[]>) => {
-    setSessions(prevSessions => {
-      const newSessions = prevSessions.map(session => {
-        if (session.id === currentSessionId) {
-          const newMessages = typeof updateFn === 'function' ? updateFn(session.messages) : updateFn;
-          // Title update logic
-          let newTitle = session.title;
-          if (session.title === 'New Session' && newMessages.length > 0) {
-             const firstUserMsg = newMessages.find(m => m.role === Role.USER);
-             if (firstUserMsg) {
-                newTitle = firstUserMsg.text.slice(0, 30) + (firstUserMsg.text.length > 30 ? '...' : '');
-             }
-          }
-          return { ...session, messages: newMessages, title: newTitle };
+    setSessions(prevSessions => prevSessions.map(session => {
+      if (session.id === currentSessionId) {
+        const newMessages = typeof updateFn === 'function' ? updateFn(session.messages) : updateFn;
+        let newTitle = session.title;
+        if (session.title === 'New Session' && newMessages.length > 0) {
+           const firstUserMsg = newMessages.find(m => m.role === Role.USER);
+           if (firstUserMsg) newTitle = firstUserMsg.text.slice(0, 30) + (firstUserMsg.text.length > 30 ? '...' : '');
         }
-        return session;
-      });
-      return newSessions;
-    });
+        return { ...session, messages: newMessages, title: newTitle };
+      }
+      return session;
+    }));
   };
 
   const handleNewSession = () => {
     const newId = Date.now().toString();
-    const newSession: ChatSession = {
-      id: newId,
-      title: 'New Session',
-      createdAt: Date.now(),
-      messages: []
-    };
-    setSessions(prev => [...prev, newSession]);
+    setSessions(prev => [...prev, { id: newId, title: 'New Session', createdAt: Date.now(), messages: [] }]);
     setCurrentSessionId(newId);
     setCurrentView('chat');
     setIsMobileMenuOpen(false);
   };
 
   const handleDeleteSession = (sessionId: string) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa lịch sử đoạn chat này không?")) return;
-    const remainingSessions = sessions.filter(s => s.id !== sessionId);
-    if (remainingSessions.length === 0) {
+    if (!window.confirm("Xóa lịch sử đoạn chat này?")) return;
+    const remaining = sessions.filter(s => s.id !== sessionId);
+    if (remaining.length === 0) {
       const newId = Date.now().toString();
-      const newSession = { id: newId, title: 'New Session', createdAt: Date.now(), messages: [] };
-      setSessions([newSession]);
+      setSessions([{ id: newId, title: 'New Session', createdAt: Date.now(), messages: [] }]);
       setCurrentSessionId(newId);
     } else {
-      setSessions(remainingSessions);
-      if (sessionId === currentSessionId) {
-         setCurrentSessionId(remainingSessions[remainingSessions.length - 1].id);
-      }
+      setSessions(remaining);
+      if (sessionId === currentSessionId) setCurrentSessionId(remaining[remaining.length - 1].id);
     }
   };
 
   const handleSaveKnowledge = (item: SavedKnowledgeItem) => {
     setSavedItems(prev => [...prev, item]);
-    const newNotification: AppNotification = {
-      id: Date.now().toString(),
-      title: 'Đã lưu kiến thức mới',
-      message: `Bạn đã lưu "${item.title}" vào kho kiến thức cá nhân.`,
-      type: 'system',
-      timestamp: Date.now(),
-      isRead: false
-    };
-    setNotifications(prev => [newNotification, ...prev]);
-  };
-
-  const handleDeleteKnowledge = (id: string) => {
-    if(confirm("Are you sure you want to delete this?")) {
-      setSavedItems(prev => prev.filter(i => i.id !== id));
-    }
-  };
-
-  const handleMarkNotificationRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
-
-  const handleMarkAllNotificationsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-  };
-
-  const handleDeleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  // --- Subscription Cancellation Handler ---
-  const handleCancelSubscription = () => {
-     if(window.confirm("Bạn có chắc chắn muốn hủy gói cước hiện tại? Tài khoản sẽ trở về gói Basic (Miễn phí) ngay lập tức.")) {
-        setUserProfile(prev => ({
-           ...prev,
-           accountTier: 'basic',
-           subscriptionExpiry: null
-        }));
-        handleAddNotification({
-          id: Date.now().toString(),
-          title: 'Đã hủy gói cước',
-          message: 'Gói cước của bạn đã được hủy thành công. Tài khoản đã trở về gói Cơ Bản.',
-          type: 'system',
-          timestamp: Date.now(),
-          isRead: false
-        });
-     }
-  };
-
-  const handleResetApp = () => {
-    if(window.confirm('CẢNH BÁO: Hành động này sẽ xóa toàn bộ lịch sử chat và cài đặt. Bạn có chắc chắn không?')) {
-       // Flag to prevent effects from writing back stale state
-       isResettingRef.current = true;
-       
-       // Clear storage
-       localStorage.clear();
-       
-       // Reload to reset state
-       window.location.reload();
-    }
+    handleAddNotification({ id: Date.now().toString(), title: 'Đã lưu kiến thức', message: `Đã lưu "${item.title}" vào thư viện.`, type: 'system', timestamp: Date.now(), isRead: false });
   };
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const renderContent = () => {
-    if (currentView === 'test-prep') {
-      return (
-        <TestPrepSystem 
-          onBack={() => setCurrentView('chat')} 
-          checkLimit={() => checkLimit('test')}
-          incrementUsage={() => incrementUsage('test')}
-        />
-      );
-    }
-
-    if (currentView === 'chat') {
-       return (
-         <ChatInterface 
-           currentSessionId={currentSessionId}
-           onSaveKnowledge={handleSaveKnowledge}
-           messages={getCurrentMessages()}
-           setMessages={setMessages}
-           onPlayGame={(data) => {
-              if (checkLimit('game')) {
-                incrementUsage('game');
-                setFullScreenGameData(data);
-              } else {
-                setLimitModalMessage("Bạn đã hết lượt chơi game hôm nay. Vui lòng nâng cấp gói để chơi thêm!");
-                setIsLimitModalOpen(true);
-              }
-           }}
-           onAddNotification={handleAddNotification}
-           checkLimit={() => checkLimit('message')}
-           incrementUsage={() => incrementUsage('message')}
-           onToggleSidebar={() => setIsMobileMenuOpen(true)}
-           onOpenProfile={() => setCurrentView('profile')}
-         />
-       );
-    }
-    
-    if (currentView === 'saved') {
-      return <SavedView items={savedItems} onDelete={handleDeleteKnowledge} />;
-    }
-    
-    if (currentView === 'notifications') {
-      return <NotificationView notifications={notifications} onMarkAllRead={handleMarkAllNotificationsRead} onDelete={handleDeleteNotification} onMarkRead={handleMarkNotificationRead} />;
-    }
-
-    if (currentView === 'profile') {
-      return (
-        <UserProfileView 
-          profile={userProfile} 
-          onUpdateProfile={setUserProfile} 
-          dailyUsage={dailyUsage}
-          onCancelSubscription={handleCancelSubscription}
-          onResetApp={handleResetApp}
-        />
-      );
-    }
-
-    if (currentView === 'live') {
-      return (
-        <LiveTutor 
-          onClose={() => setCurrentView('chat')}
-          userProfile={userProfile}
-          checkLimit={() => checkLimit('message')}
-          incrementUsage={() => incrementUsage('message')}
-        />
-      );
+    switch (currentView) {
+      case 'test-prep': return <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => checkLimit('test')} incrementUsage={() => incrementUsage('test')} />;
+      case 'saved': return <SavedView items={savedItems} onDelete={(id) => setSavedItems(prev => prev.filter(i => i.id !== id))} />;
+      case 'notifications': return <NotificationView notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, isRead: true})))} onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))} onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, isRead: true} : n))} />;
+      case 'profile': return <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => setUserProfile(p => ({...p, accountTier: 'basic', subscriptionExpiry: null}))} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} />;
+      case 'live': return <LiveTutor onClose={() => setCurrentView('chat')} userProfile={userProfile} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} />;
+      default: return <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { if (checkLimit('game')) { incrementUsage('game'); setFullScreenGameData(data); } else { setLimitModalMessage("Hết lượt chơi game hôm nay."); setIsLimitModalOpen(true); } }} onAddNotification={handleAddNotification} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} />;
     }
   };
 
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden relative">
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
-      
-      <SubscriptionExpiredModal 
-        isOpen={showExpiryModal} 
-        onClose={() => setShowExpiryModal(false)}
-        onRenew={() => {
-          setShowExpiryModal(false);
-          setCurrentView('profile');
-        }}
-        expiredPackageName={expiredPackageName}
-      />
-
-      <LimitReachedModal 
-        isOpen={isLimitModalOpen}
-        onClose={() => setIsLimitModalOpen(false)}
-        onUpgrade={() => {
-          setIsLimitModalOpen(false);
-          setCurrentView('profile');
-        }}
-        message={limitModalMessage}
-      />
+      <SubscriptionExpiredModal isOpen={showExpiryModal} onClose={() => setShowExpiryModal(false)} onRenew={() => { setShowExpiryModal(false); setCurrentView('profile'); }} expiredPackageName={expiredPackageName} />
+      <LimitReachedModal isOpen={isLimitModalOpen} onClose={() => setIsLimitModalOpen(false)} onUpgrade={() => { setIsLimitModalOpen(false); setCurrentView('profile'); }} message={limitModalMessage} />
 
       {fullScreenGameData && (
-        <div className="fixed inset-0 z-50 bg-gray-100 animate-fade-in flex flex-col">
-          <MiniGame 
-             data={fullScreenGameData} 
-             isFullScreenMode={true} 
-             onCloseFullScreen={() => setFullScreenGameData(null)}
-          />
+        <div className="fixed inset-0 z-50 bg-gray-100 flex flex-col">
+          <MiniGame data={fullScreenGameData} isFullScreenMode={true} onCloseFullScreen={() => setFullScreenGameData(null)} />
         </div>
       )}
 
-      {isMobileMenuOpen && (
-        <div className="absolute inset-0 bg-black/50 z-[45] md:hidden" onClick={() => setIsMobileMenuOpen(false)}></div>
-      )}
+      {isMobileMenuOpen && <div className="absolute inset-0 bg-black/50 z-[45] md:hidden" onClick={() => setIsMobileMenuOpen(false)}></div>}
 
       <div className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'}`}>
-        <Sidebar 
-          sessions={sessions}
-          currentSessionId={currentSessionId}
-          onNewSession={handleNewSession}
-          onSelectSession={(id) => { setCurrentSessionId(id); setIsMobileMenuOpen(false); }}
-          onDeleteSession={handleDeleteSession}
-          savedItems={savedItems}
-          currentView={currentView}
-          setCurrentView={(view) => { setCurrentView(view); setIsMobileMenuOpen(false); }}
-          onOpenHelp={() => setIsHelpOpen(true)}
-          unreadNotificationsCount={unreadCount}
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        />
+        <Sidebar sessions={sessions} currentSessionId={currentSessionId} onNewSession={handleNewSession} onSelectSession={(id) => { setCurrentSessionId(id); setIsMobileMenuOpen(false); }} onDeleteSession={handleDeleteSession} savedItems={savedItems} currentView={currentView} setCurrentView={(view) => { setCurrentView(view); setIsMobileMenuOpen(false); }} onOpenHelp={() => setIsHelpOpen(true)} unreadNotificationsCount={unreadCount} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       </div>
 
-      <div className="flex-1 flex flex-col h-full w-full min-w-0">
-        {/* Only show default mobile header if NOT in chat view */}
+      <main className="flex-1 flex flex-col h-full w-full min-w-0" role="main">
         {currentView !== 'chat' && (
-          <div className="md:hidden h-14 bg-white border-b flex items-center px-4 justify-between flex-shrink-0">
+          <header className="md:hidden h-14 bg-white border-b flex items-center px-4 justify-between flex-shrink-0">
              <span className="font-bold text-gray-800">VIP Tutor</span>
-             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600">
+             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600" aria-label="Open Menu">
                <Menu className="w-6 h-6" />
              </button>
-          </div>
+          </header>
         )}
         <div className="flex-1 overflow-hidden relative">
           {renderContent()}
         </div>
-      </div>
+      </main>
     </div>
   );
 };

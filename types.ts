@@ -1,5 +1,4 @@
 
-
 export enum Role {
   USER = 'user',
   MODEL = 'model',
@@ -46,28 +45,20 @@ export interface SavedKnowledgeItem {
   tags?: string[];
 }
 
-export interface ApiKeyInfo {
-  id: string;
-  key: string;
-  label: string;
-  addedAt: number;
-  isValid: boolean;
-}
-
 // Game Types
-export interface GameData {
-  title: string;
-  topic: string;
-  difficulty: string;
-  questions: GameQuestion[];
-}
-
 export interface GameQuestion {
   id: number;
   question: string;
   options: string[];
   correctAnswer: number;
   explanation: string;
+}
+
+export interface GameData {
+  title: string;
+  topic: string;
+  difficulty: string;
+  questions: GameQuestion[];
 }
 
 // Test Prep Types
@@ -144,14 +135,12 @@ export interface DailyUsage {
   gamesPlayed: number;
 }
 
-/**
- * Connection info for sync features.
- */
+// Added missing ClientConnectionInfo for synchronization features in AdminConnect
 export interface ClientConnectionInfo {
   clientId: string;
   channelName: string;
   status: 'online' | 'offline';
-  lastSync?: number;
   serverUrl?: string;
   serverApiKey?: string;
+  lastSync?: number;
 }

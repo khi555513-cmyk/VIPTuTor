@@ -3,7 +3,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Sửa lỗi Accessibility: Cho phép zoom và không giới hạn scale -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VIP English Tutor</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -90,8 +89,7 @@
 </script>
 </head>
   <body class="bg-slate-50 text-slate-900 h-[100dvh] overflow-hidden selection:bg-indigo-100 selection:text-indigo-700">
-    <!-- Landmark chính cho Accessibility -->
-    <div id="root" role="main"></div>
+    <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>

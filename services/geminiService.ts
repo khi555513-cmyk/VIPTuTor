@@ -3,9 +3,6 @@ import { GoogleGenAI } from "@google/genai";
 import { Attachment, TutorMode } from '../types';
 import { getSystemInstruction } from '../constants';
 
-// Initialize the GoogleGenAI client using the API key from environment variables as per guidelines.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
-
 /**
  * Generates a response from the AI tutor based on text prompt, attachments and selected mode.
  */
@@ -15,6 +12,9 @@ export const generateTutorResponse = async (
   mode: TutorMode
 ): Promise<string> => {
   try {
+    // Initialize the GoogleGenAI client right before use as per guidelines.
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+    
     const parts: any[] = [];
     let promptText = text;
 
@@ -58,8 +58,6 @@ export const generateTutorResponse = async (
     const systemInstruction = getSystemInstruction(mode);
 
     // Using gemini-3 series models as per guidelines.
-    // Basic Text Tasks: 'gemini-3-flash-preview'
-    // Complex Text Tasks: 'gemini-3-pro-preview'
     const modelName = (mode === TutorMode.EXERCISE || mode === TutorMode.THEORY) 
       ? 'gemini-3-pro-preview' 
       : 'gemini-3-flash-preview';

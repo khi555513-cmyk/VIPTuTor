@@ -10,7 +10,6 @@ import mammoth from 'mammoth';
 import { TEST_GENERATOR_PROMPT, TEST_GRADER_PROMPT } from '../constants';
 import MarkdownRenderer from './MarkdownRenderer';
 import confetti from 'canvas-confetti';
-import { getApiKey } from '../services/geminiService';
 
 interface TestPrepSystemProps {
   onBack: () => void;
@@ -85,15 +84,9 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     setStep('generating');
     incrementUsage(); // Deduct usage
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      alert("⚠️ Lỗi: Chưa cấu hình API Key. Vui lòng kiểm tra file .env hoặc cấu hình key.");
-      setStep('config');
-      return;
-    }
-
     try {
-      const ai = new GoogleGenAI({ apiKey });
+      // Using gemini-3-pro-preview for complex reasoning tasks like exam generation.
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
       
       const prompt = `
         Yêu cầu tạo đề thi:
@@ -107,7 +100,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
       `;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3-pro-preview',
         contents: { parts: [{ text: prompt }] },
         config: {
           systemInstruction: TEST_GENERATOR_PROMPT,
@@ -210,11 +203,9 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     handleExitFullScreen();
 
     setStep('grading');
-    const apiKey = getApiKey();
-    if (!apiKey) return;
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
       
       const gradingPayload = {
         examData: examData,
@@ -227,8 +218,9 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
         Hãy chấm điểm theo đúng format JSON yêu cầu.
       `;
 
+      // Using gemini-3-pro-preview for complex grading reasoning.
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash', 
+        model: 'gemini-3-pro-preview', 
         contents: { parts: [{ text: prompt }] },
         config: {
           systemInstruction: TEST_GRADER_PROMPT,

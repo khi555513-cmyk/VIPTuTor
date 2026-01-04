@@ -10,18 +10,13 @@ import MiniGame from './components/MiniGame';
 import UserProfileView from './components/UserProfile';
 import SubscriptionExpiredModal from './components/SubscriptionExpiredModal';
 import LimitReachedModal from './components/LimitReachedModal';
-import ApiKeyModal from './components/ApiKeyModal';
 import { ChatSession, SavedKnowledgeItem, Message, Role, AppNotification, GameData, UserProfile, DailyUsage } from './types';
 import { TIER_LIMITS } from './constants';
 import { Menu } from 'lucide-react';
-import { getApiKey } from './services/geminiService';
 
 const App: React.FC = () => {
   // Ref to track if we are in the process of resetting data
   const isResettingRef = useRef(false);
-
-  // --- API Key State ---
-  const [hasApiKey, setHasApiKey] = useState<boolean>(!!getApiKey());
 
   // --- App Data State ---
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
@@ -407,10 +402,6 @@ const App: React.FC = () => {
       );
     }
   };
-
-  if (!hasApiKey) {
-    return <ApiKeyModal onSuccess={() => setHasApiKey(true)} />;
-  }
 
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden relative">

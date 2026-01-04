@@ -245,8 +245,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       });
     };
 
+    // Fix: Explicitly cast Array.from(files) as File[] to prevent 'unknown' type error.
+    const fileList = Array.from(files) as File[];
+
     // Process sequentially to keep UI responsive
-    for (const file of Array.from(files)) {
+    for (const file of fileList) {
       await processFile(file);
     }
     

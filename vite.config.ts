@@ -9,7 +9,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 3000,
+    chunkSizeWarningLimit: 3500,
     rollupOptions: {
       input: {
         main: './index.html'

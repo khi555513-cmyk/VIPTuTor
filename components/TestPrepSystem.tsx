@@ -34,32 +34,13 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
   const [result, setResult] = useState<ExamResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploadedFileName(file.name);
-    const reader = new FileReader();
-    if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
-      reader.onload = async (event) => {
-        try {
-          const arrayBuffer = event.target?.result as ArrayBuffer;
-          const result = await mammoth.extractRawText({ arrayBuffer });
-          setConfig(prev => ({ ...prev, referenceContent: result.value }));
-        } catch (err) { alert("Error reading Word file"); }
-      };
-      reader.readAsArrayBuffer(file);
-    } else {
-      reader.onload = (event) => { setConfig(prev => ({ ...prev, referenceContent: event.target?.result as string })); };
-      reader.readAsText(file);
-    }
-  };
-
   const startGeneration = async () => {
     if (!checkLimit()) { alert("🔒 Hết lượt tạo đề thi!"); return; }
     setStep('generating');
     incrementUsage();
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const apiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || (process.env.API_KEY as string);
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       const prompt = `Yêu cầu tạo đề thi: Trình độ: ${config.gradeLevel}; Định dạng: ${config.examFormat}; Thời gian: ${config.duration} phút; Chủ đề: ${config.topics || "Tổng hợp"}. ${config.referenceContent ? "Dựa trên tài liệu: " + config.referenceContent.slice(0, 3000) : ""}`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview',
@@ -76,7 +57,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
       } else { throw new Error("Could not parse exam JSON"); }
     } catch (e: any) {
       console.error(e);
-      if (e?.message?.includes("Requested entity was not found") && onApiError) { onApiError(); }
+      if ((e?.message?.includes("Requested entity was not found") || e?.status === 404 || e?.status === 403) && onApiError) { onApiError(); }
       alert("Lỗi khi tạo đề thi. Vui lòng kiểm tra lại API Key.");
       setStep('config');
     }
@@ -112,7 +93,8 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     handleExitFullScreen();
     setStep('grading');
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const apiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || (process.env.API_KEY as string);
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       const prompt = `Dữ liệu bài làm: ${JSON.stringify({ examData, userAnswers })}. Chấm điểm theo format JSON.`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview', 
@@ -129,7 +111,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
       } else { throw new Error("Grading JSON failed"); }
     } catch (e: any) {
       console.error(e);
-      if (e?.message?.includes("Requested entity was not found") && onApiError) { onApiError(); }
+      if ((e?.message?.includes("Requested entity was not found") || e?.status === 404 || e?.status === 403) && onApiError) { onApiError(); }
       alert("Lỗi khi chấm bài.");
       setStep('result'); 
     }

@@ -41,7 +41,10 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
     setError(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+      const apiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || (process.env.API_KEY as string);
+      if (!apiKey) throw new Error("API Key not found");
+      
+      const ai = new GoogleGenAI({ apiKey: apiKey });
       
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
@@ -153,7 +156,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
       sessionRef.current = await sessionPromise;
     } catch (err) {
       console.error(err);
-      setError("Không thể khởi động micro. Vui lòng cấp quyền micro.");
+      setError("Không thể khởi động micro hoặc lỗi API Key. Vui lòng kiểm tra lại.");
       setIsConnecting(false);
     }
   };

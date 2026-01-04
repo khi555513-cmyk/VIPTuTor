@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Send, Paperclip, X, Save, Sparkles, BookOpen, GraduationCap, Copy, 
-  FileText, Gamepad2, Zap, ArrowRight, MessageCircle, Lock, Menu, ChevronDown, Mic, LayoutGrid, Plus, Loader2, AlertCircle
+  FileText, Gamepad2, Zap, ArrowRight, MessageCircle, Lock, Menu, ChevronDown, Mic, LayoutGrid, Plus, Loader2, AlertCircle, Settings
 } from 'lucide-react';
 import { Message, Role, TutorMode, Attachment, SavedKnowledgeItem, GameData, AppNotification } from '../types';
 import { generateTutorResponse } from '../services/geminiService';
@@ -162,7 +162,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const errorMessage: Message = {
         id: (Date.now() + 2).toString(),
         role: Role.MODEL,
-        text: `**Lỗi kết nối:** Không thể nhận phản hồi từ AI. Vui lòng kiểm tra lại kết nối mạng hoặc API Key.`,
+        text: `**Lỗi nghiêm trọng:** Ứng dụng gặp sự cố khi xử lý dữ liệu. Vui lòng làm mới trang hoặc kiểm tra lại kết nối.`,
         timestamp: Date.now(),
         modeUsed: modeToUse
       };
@@ -193,7 +193,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
-    // Tối ưu giới hạn file trên mobile để tránh crash trình duyệt
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
     const MAX_SIZE = (isMobile ? 25 : 150) * 1024 * 1024; 
     
@@ -206,7 +205,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           return null;
         }
 
-        // Xử lý Word (.docx)
         if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" || file.name.endsWith('.docx')) {
           return new Promise((resolve) => {
             const reader = new FileReader();
@@ -225,7 +223,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           });
         }
 
-        // Xử lý Text Files
         if (isTextFile(file)) {
           return new Promise((resolve) => {
             const reader = new FileReader();
@@ -237,7 +234,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           });
         }
 
-        // Xử lý Images / Binary
         return new Promise((resolve) => {
           const reader = new FileReader();
           reader.onloadend = () => {
@@ -259,11 +255,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     const newAttachments: Attachment[] = [];
     const fileList = Array.from(files);
     
-    // Xử lý tuần tự (Sequential) thay vì đồng thời (Parallel) để bảo vệ bộ nhớ mobile
     for (const file of fileList) {
       const result = await processFile(file);
       if (result) newAttachments.push(result);
-      // Giải phóng bộ nhớ nhỏ giữa các lần lặp
       await new Promise(r => setTimeout(r, 50));
     }
 
@@ -321,7 +315,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     <div className="flex flex-col h-full bg-slate-50 relative overflow-hidden">
       {/* Header */}
       <div className="hidden md:flex h-16 border-b items-center justify-between px-6 bg-white/80 backdrop-blur-md z-20 shadow-sm shrink-0 sticky top-0">
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
@@ -415,9 +409,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         {messages.map((msg, index) => {
           const isLastMessage = index === messages.length - 1;
           const isModel = msg.role === Role.MODEL;
+          const hasError = msg.role === Role.MODEL && (msg.text.includes("LỖI QUÁ TẢI") || msg.text.includes("LỖI XÁC THỰC"));
+
           return (
             <div key={msg.id} className={`flex w-full animate-slide-up ${msg.role === Role.USER ? 'justify-end' : 'justify-start'}`}>
-              <div className={`relative max-w-[88%] md:max-w-[75%] rounded-[1.5rem] shadow-sm border px-1 ${msg.role === Role.USER ? 'bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] text-white border-transparent rounded-br-none shadow-indigo-200' : 'bg-white border-gray-100 text-gray-800 rounded-bl-none shadow-gray-100'}`}>
+              <div className={`relative max-w-[88%] md:max-w-[75%] rounded-[1.5rem] shadow-sm border px-1 ${msg.role === Role.USER ? 'bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] text-white border-transparent rounded-br-none shadow-indigo-200' : hasError ? 'bg-red-50 border-red-200 text-red-800' : 'bg-white border-gray-100 text-gray-800 rounded-bl-none shadow-gray-100'}`}>
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="p-3 gap-2 flex flex-wrap">
                     {msg.attachments.map((att, idx) => (
@@ -445,7 +441,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                      </div>
                   )}
                 </div>
-                {isLastMessage && isModel && !msg.isGameData && !isLoading && (
+                {isLastMessage && isModel && !msg.isGameData && !isLoading && !hasError && (
                   <div className="absolute -bottom-10 left-0 animate-pop-in z-10">
                      <button onClick={handleQuickCreateGame} className="flex items-center gap-2 bg-white border border-green-200 text-green-700 text-xs font-bold py-1.5 px-3 rounded-full shadow-lg hover:bg-green-50 hover:scale-105 transition-all"><Zap className="w-3 h-3 fill-green-500 text-green-500" /> Tạo Game</button>
                   </div>
@@ -480,7 +476,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       <div className="fixed bottom-0 left-0 right-0 md:left-auto md:w-[calc(100%-16rem)] lg:w-[calc(100%-16rem)] z-40 bg-slate-50/80 backdrop-blur-lg border-t border-gray-200/50 pb-safe">
         <div className="max-w-4xl mx-auto w-full px-3 py-3">
            
-           {/* Attachments Preview Area (Optimized for Mobile) */}
+           {/* Attachments Preview Area */}
            {attachments.length > 0 && (
             <div className="mb-3 flex gap-2 overflow-x-auto py-2 px-1 scrollbar-hide no-scrollbar animate-slide-up snap-x">
                {attachments.map((att, idx) => renderAttachmentPreview(att, idx))}

@@ -23,8 +23,6 @@ const UserProfileView: React.FC<UserProfileProps> = ({
 }) => {
   const [formData, setFormData] = useState<UserProfile>(profile);
   const [isEditing, setIsEditing] = useState(false);
-  const [isManualInputVisible, setIsManualInputVisible] = useState(false);
-  const [manualKey, setManualKey] = useState(localStorage.getItem('CUSTOM_GEMINI_KEY') || '');
   
   useEffect(() => {
     setFormData(prev => ({ ...prev, ...profile }));
@@ -93,19 +91,6 @@ const UserProfileView: React.FC<UserProfileProps> = ({
     }
   };
 
-  const handleSaveManualKey = () => {
-    if (manualKey.trim()) {
-      localStorage.setItem('CUSTOM_GEMINI_KEY', manualKey.trim());
-      localStorage.setItem('tutor_authorized', 'true');
-      alert("Đã lưu API Key thủ công thành công!");
-      window.location.reload();
-    } else {
-      localStorage.removeItem('CUSTOM_GEMINI_KEY');
-      alert("Đã xóa API Key thủ công. Hệ thống sẽ sử dụng Key mặc định.");
-      window.location.reload();
-    }
-  };
-
   const renderTierBadge = (tier: AccountTier) => {
     switch (tier) {
       case 'vip': return ( <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md animate-shimmer whitespace-nowrap"> <Crown className="w-3 h-3 fill-white" /> PREMIUM MEMBER </div> );
@@ -115,7 +100,7 @@ const UserProfileView: React.FC<UserProfileProps> = ({
   };
   
   const limits = TIER_LIMITS[profile.accountTier];
-  const activeApiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || process.env.API_KEY || '';
+  const activeApiKey = process.env.API_KEY || '';
 
   return (
     <div className="h-full bg-gray-50 flex flex-col">
@@ -126,7 +111,7 @@ const UserProfileView: React.FC<UserProfileProps> = ({
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-6xl mx-auto space-y-6">
           
-          {/* Enhanced API Key Management Section */}
+          {/* Enhanced API Connection Info Section */}
           <section className="bg-[#0f172a] rounded-[2rem] shadow-2xl p-6 md:p-10 text-white border border-indigo-500/20 relative overflow-hidden">
              {/* Decorative Background Element */}
              <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
@@ -137,10 +122,10 @@ const UserProfileView: React.FC<UserProfileProps> = ({
                       <ShieldCheck className="w-8 h-8 text-white" />
                    </div>
                    <div>
-                      <h3 className="font-black text-2xl tracking-tight mb-1">Hệ Thống API Key</h3>
+                      <h3 className="font-black text-2xl tracking-tight mb-1">Kết Nối Hệ Thống</h3>
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest">Trạng thái: {localStorage.getItem('CUSTOM_GEMINI_KEY') ? 'Manual Override' : 'Secure Connection'}</p>
+                        <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest">Trạng thái: Secure AI Connection</p>
                       </div>
                    </div>
                 </div>
@@ -149,70 +134,43 @@ const UserProfileView: React.FC<UserProfileProps> = ({
                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
                       <div className="flex justify-between items-center px-1">
                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                            <Lock className="w-3 h-3" /> API Key Hiện Tại
+                            <Lock className="w-3 h-3" /> Bảo Mật AI
                          </span>
-                         <span className="text-[10px] text-slate-500">{localStorage.getItem('CUSTOM_GEMINI_KEY') ? 'Custom Key' : 'Google Cloud (Vertex AI)'}</span>
+                         <span className="text-[10px] text-slate-500">Google Cloud (Vertex AI)</span>
                       </div>
                       
-                      {!isManualInputVisible ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-black/40 border border-white/5 px-4 py-3 rounded-xl font-mono text-sm text-indigo-200 overflow-hidden select-none">
-                              {activeApiKey ? `${activeApiKey.slice(0, 10)}••••••••••••${activeApiKey.slice(-4)}` : "Chưa cấu hình"}
-                          </div>
-                          <button 
-                            onClick={onManageApiKey}
-                            className="p-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-900/20 transition-all hover:scale-105 active:scale-95 border border-indigo-400/30"
-                            title="Thay đổi / Cấu hình lại API Key qua AI Studio"
-                          >
-                              <RefreshCw className="w-5 h-5" />
-                          </button>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-black/40 border border-white/5 px-4 py-3 rounded-xl font-mono text-sm text-indigo-200 overflow-hidden select-none">
+                            {activeApiKey ? `${activeApiKey.slice(0, 10)}••••••••••••${activeApiKey.slice(-4)}` : "Đã được bảo mật"}
                         </div>
-                      ) : (
-                        <div className="flex flex-col gap-2 animate-fade-in">
-                          <input 
-                            type="password"
-                            value={manualKey}
-                            onChange={(e) => setManualKey(e.target.value)}
-                            placeholder="Dán Gemini API Key vào đây..."
-                            className="w-full bg-black/60 border border-indigo-500/30 px-4 py-3 rounded-xl font-mono text-sm text-white focus:border-indigo-500 outline-none"
-                          />
-                          <div className="flex gap-2">
-                            <button 
-                              onClick={handleSaveManualKey}
-                              className="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg font-bold text-xs transition-all active:scale-95"
-                            >
-                              LƯU KEY
-                            </button>
-                            <button 
-                              onClick={() => setIsManualInputVisible(false)}
-                              className="flex-1 bg-white/10 hover:bg-white/20 text-white py-2 rounded-lg font-bold text-xs transition-all active:scale-95"
-                            >
-                              HỦY
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                        <button 
+                          onClick={onManageApiKey}
+                          className="p-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-900/20 transition-all hover:scale-105 active:scale-95 border border-indigo-400/30"
+                          title="Cấu hình kết nối AI"
+                        >
+                            <RefreshCw className="w-5 h-5" />
+                        </button>
+                      </div>
                    </div>
                 </div>
 
                 <div className="flex flex-col gap-3 shrink-0">
                    <button 
-                      onClick={() => setIsManualInputVisible(!isManualInputVisible)}
+                      onClick={onManageApiKey}
                       className="px-6 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-2"
                    >
-                      <Key className="w-4 h-4" /> {isManualInputVisible ? 'ẨN NHẬP KEY' : 'NHẬP KEY THỦ CÔNG'}
+                      <Key className="w-4 h-4" /> THAY ĐỔI API KEY
                    </button>
                    <button 
                       onClick={() => {
-                        if(confirm('Bạn có chắc chắn muốn ngắt kết nối API và xóa Key thủ công?')) {
+                        if(confirm('Bạn có chắc chắn muốn ngắt kết nối API?')) {
                           localStorage.removeItem('tutor_authorized');
-                          localStorage.removeItem('CUSTOM_GEMINI_KEY');
                           window.location.reload();
                         }
                       }}
                       className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-2"
                    >
-                      <LogOut className="w-4 h-4" /> NGẮT KẾT NỐI KEY
+                      <LogOut className="w-4 h-4" /> NGẮT KẾT NỐI
                    </button>
                 </div>
              </div>

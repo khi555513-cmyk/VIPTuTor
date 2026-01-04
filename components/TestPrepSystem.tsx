@@ -39,7 +39,10 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     setStep('generating');
     incrementUsage();
     try {
-      const apiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || (process.env.API_KEY as string);
+      // CRITICAL: Always use process.env.API_KEY directly and create instance right before calling.
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) throw new Error("API Key not found");
+
       const ai = new GoogleGenAI({ apiKey: apiKey });
       const prompt = `Yêu cầu tạo đề thi: Trình độ: ${config.gradeLevel}; Định dạng: ${config.examFormat}; Thời gian: ${config.duration} phút; Chủ đề: ${config.topics || "Tổng hợp"}. ${config.referenceContent ? "Dựa trên tài liệu: " + config.referenceContent.slice(0, 3000) : ""}`;
       const response = await ai.models.generateContent({
@@ -47,6 +50,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
         contents: { parts: [{ text: prompt }] },
         config: { systemInstruction: TEST_GENERATOR_PROMPT, temperature: 0.5 }
       });
+      // Access .text property directly.
       const text = response.text || "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -93,7 +97,9 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     handleExitFullScreen();
     setStep('grading');
     try {
-      const apiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || (process.env.API_KEY as string);
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) throw new Error("API Key not found");
+
       const ai = new GoogleGenAI({ apiKey: apiKey });
       const prompt = `Dữ liệu bài làm: ${JSON.stringify({ examData, userAnswers })}. Chấm điểm theo format JSON.`;
       const response = await ai.models.generateContent({
@@ -101,6 +107,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
         contents: { parts: [{ text: prompt }] },
         config: { systemInstruction: TEST_GRADER_PROMPT, temperature: 0.2 }
       });
+      // Access .text property directly.
       const text = response.text || "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {

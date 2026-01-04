@@ -1,5 +1,4 @@
 
-import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, PhoneOff, Volume2, MessageSquare, Sparkles, Loader2, Play } from 'lucide-react';
 import { GoogleGenAI, Modality, LiveServerMessage, Blob } from '@google/genai';
 import { UserProfile } from '../types';
@@ -41,8 +40,9 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
     setError(null);
 
     try {
-      const apiKey = localStorage.getItem('CUSTOM_GEMINI_KEY') || (process.env.API_KEY as string);
-      if (!apiKey) throw new Error("API Key not found");
+      // CRITICAL: Create GoogleGenAI instance right before the call and use process.env.API_KEY exclusively.
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) throw new Error("API Key not found in environment variables");
       
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
@@ -68,6 +68,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
               const pcmBlob = createBlob(inputData);
+              // CRITICAL: Solely rely on sessionPromise resolves to send data to prevent race conditions.
               sessionPromise.then((session) => {
                 session.sendRealtimeInput({ media: pcmBlob });
               });
@@ -105,6 +106,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
               const ctx = outputAudioContextRef.current!;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
               
+              // Handle raw PCM stream decoding as per example.
               const audioBuffer = await decodeAudioData(
                 decode(base64Audio),
                 ctx,

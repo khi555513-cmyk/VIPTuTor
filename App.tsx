@@ -11,42 +11,12 @@ import UserProfileView from './components/UserProfile';
 import LiveTutor from './components/LiveTutor';
 import SubscriptionExpiredModal from './components/SubscriptionExpiredModal';
 import LimitReachedModal from './components/LimitReachedModal';
-import Gateway from './components/Gateway';
 import { ChatSession, SavedKnowledgeItem, Message, Role, AppNotification, GameData, UserProfile, DailyUsage } from './types';
 import { TIER_LIMITS } from './constants';
 import { Menu, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const isResettingRef = useRef(false);
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      // Check for persistent authorization
-      const persistedAuth = localStorage.getItem('tutor_authorized') === 'true';
-      if (persistedAuth) {
-        setIsAuthorized(true);
-        return;
-      }
-
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setIsAuthorized(hasKey);
-      } else {
-        setIsAuthorized(true);
-      }
-    };
-    checkAuth();
-  }, []);
-
-  const handleAuthorize = async () => {
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-      // Persist the authorization state
-      localStorage.setItem('tutor_authorized', 'true');
-      setIsAuthorized(true);
-    }
-  };
 
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
@@ -99,16 +69,16 @@ const App: React.FC = () => {
     try {
       const saved = localStorage.getItem('tutor_profile');
       const defaultProfile: UserProfile = { 
-        name: 'Bạn Học Viên', 
+        name: 'Học Viên VIP', 
         joinDate: Date.now(), 
-        target: 'Giao tiếp cơ bản',
-        accountTier: 'basic',
+        target: 'IELTS 8.0 & Giao tiếp bản xứ',
+        accountTier: 'vip', // Mặc định lên VIP vì đã dùng API riêng
         subscriptionExpiry: null,
         usedCodes: [] 
       };
       return saved ? { ...defaultProfile, ...JSON.parse(saved) } : defaultProfile;
     } catch (e) {
-      return { name: 'Bạn Học Viên', joinDate: Date.now(), target: 'Giao tiếp cơ bản', accountTier: 'basic', subscriptionExpiry: null, usedCodes: [] };
+      return { name: 'Học Viên VIP', joinDate: Date.now(), target: 'IELTS 8.0 & Giao tiếp bản xứ', accountTier: 'vip', subscriptionExpiry: null, usedCodes: [] };
     }
   });
 
@@ -163,11 +133,7 @@ const App: React.FC = () => {
   };
 
   const checkLimit = (type: 'message' | 'test' | 'game'): boolean => {
-    const tier = userProfile.accountTier;
-    const limits = TIER_LIMITS[tier];
-    if (type === 'message' && dailyUsage.messagesCount >= limits.messages) return false;
-    if (type === 'test' && dailyUsage.testsGenerated >= limits.tests) return false;
-    if (type === 'game' && dailyUsage.gamesPlayed >= limits.games) return false;
+    // Với API key riêng, chúng ta bỏ qua giới hạn
     return true;
   };
 
@@ -231,27 +197,16 @@ const App: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
-  const handleApiError = () => {
-    setIsAuthorized(false);
-    localStorage.removeItem('tutor_authorized');
-  };
-
   const renderContent = () => {
     switch (currentView) {
-      case 'test-prep': return <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => checkLimit('test')} incrementUsage={() => incrementUsage('test')} onApiError={handleApiError} />;
+      case 'test-prep': return <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => true} incrementUsage={() => incrementUsage('test')} />;
       case 'saved': return <SavedView items={savedItems} onDelete={(id) => setSavedItems(prev => prev.filter(i => i.id !== id))} />;
       case 'notifications': return <NotificationView notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, isRead: true})))} onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))} onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, isRead: true} : n))} />;
-      case 'profile': return <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => setUserProfile(p => ({...p, accountTier: 'basic', subscriptionExpiry: null}))} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} onManageApiKey={handleAuthorize} />;
-      case 'live': return <LiveTutor onClose={() => setCurrentView('chat')} userProfile={userProfile} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} />;
-      default: return <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { if (checkLimit('game')) { incrementUsage('game'); setFullScreenGameData(data); } else { setLimitModalMessage("Hết lượt chơi game hôm nay."); setIsLimitModalOpen(true); } }} onAddNotification={handleAddNotification} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} onApiError={handleApiError} />;
+      case 'profile': return <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => {}} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} onManageApiKey={() => {}} />;
+      case 'live': return <LiveTutor onClose={() => setCurrentView('chat')} userProfile={userProfile} checkLimit={() => true} incrementUsage={() => incrementUsage('message')} />;
+      default: return <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { incrementUsage('game'); setFullScreenGameData(data); }} onAddNotification={handleAddNotification} checkLimit={() => true} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} />;
     }
   };
-
-  if (isAuthorized === null) return <div className="h-screen w-screen bg-slate-900 flex items-center justify-center"><Loader2 className="w-10 h-10 text-indigo-500 animate-spin" /></div>;
-
-  if (!isAuthorized) {
-    return <Gateway onAuthorize={handleAuthorize} />;
-  }
 
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden relative">
@@ -274,7 +229,7 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col h-full w-full min-w-0" role="main">
         {currentView !== 'chat' && (
           <header className="md:hidden h-14 bg-white border-b flex items-center px-4 justify-between flex-shrink-0">
-             <span className="font-bold text-gray-800">English Tutor</span>
+             <span className="font-bold text-gray-800">English Tutor PRO</span>
              <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600" aria-label="Open Menu">
                <Menu className="w-6 h-6" />
              </button>

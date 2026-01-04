@@ -9,17 +9,16 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 3500,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       input: {
         main: './index.html'
       },
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom'],
-          'lucide-vendor': ['lucide-react'],
-          'ai-vendor': ['@google/genai'],
-          'utils-vendor': ['marked', 'dompurify', 'mammoth', 'canvas-confetti']
+          vendor: ['react', 'react-dom', 'lucide-react'],
+          ai: ['@google/genai'],
+          utils: ['marked', 'dompurify', 'mammoth', 'canvas-confetti']
         }
       }
     }

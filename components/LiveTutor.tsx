@@ -53,6 +53,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
         model: 'gemini-2.5-flash-native-audio-preview-09-2025',
         callbacks: {
           onopen: () => {
+            console.log('Live session opened');
             setIsActive(true);
             setIsConnecting(false);
             incrementUsage();
@@ -73,37 +74,28 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
             scriptProcessor.connect(audioContextRef.current!.destination);
           },
           onmessage: async (message: LiveServerMessage) => {
-            const serverContent = message.serverContent;
-            if (!serverContent) return;
-
-            // Xử lý Transcription an toàn
-            if (serverContent.outputTranscription) {
-              const text = serverContent.outputTranscription.text || '';
+            if (message.serverContent?.outputTranscription) {
+              const text = message.serverContent.outputTranscription.text || '';
               setTranscription((prev): TranscriptionItem[] => {
                 const last = prev[prev.length - 1];
-                if (last && last.role === 'model') {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { ...last, text: last.text + text };
-                  return updated;
+                if (last?.role === 'model') {
+                  return [...prev.slice(0, -1), { role: 'model', text: last.text + text }];
                 }
                 return [...prev, { role: 'model', text }];
               });
-            } else if (serverContent.inputTranscription) {
-              const text = serverContent.inputTranscription.text || '';
+            } else if (message.serverContent?.inputTranscription) {
+              const text = message.serverContent.inputTranscription.text || '';
               setTranscription((prev): TranscriptionItem[] => {
                 const last = prev[prev.length - 1];
-                if (last && last.role === 'user') {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { ...last, text: last.text + text };
-                  return updated;
+                if (last?.role === 'user') {
+                  return [...prev.slice(0, -1), { role: 'user', text: last.text + text }];
                 }
                 return [...prev, { role: 'user', text }];
               });
             }
 
-            // Xử lý Audio an toàn
-            const parts = serverContent.modelTurn?.parts;
-            const base64Audio = (parts && parts.length > 0) ? parts[0].inlineData?.data : undefined;
+            const parts = message.serverContent?.modelTurn?.parts;
+            const base64Audio = parts?.[0]?.inlineData?.data;
 
             if (base64Audio) {
               setIsSpeaking(true);
@@ -130,21 +122,20 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
               sourcesRef.current.add(source);
             }
 
-            if (serverContent.interrupted) {
-              sourcesRef.current.forEach(s => {
-                try { s.stop(); } catch(e) {}
-              });
+            if (message.serverContent?.interrupted) {
+              sourcesRef.current.forEach(s => s.stop());
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
               setIsSpeaking(false);
             }
           },
           onerror: (e) => {
-            console.error('Live error:', e);
-            setError("Lỗi kết nối micro.");
+            console.error('Live session error:', e);
+            setError("Lỗi kết nối âm thanh. Vui lòng kiểm tra micro.");
             stopSession();
           },
           onclose: () => {
+            console.log('Live session closed');
             stopSession();
           }
         },
@@ -155,13 +146,14 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: `You are a VIP English Tutor. You help students practice English through voice. Current student target: ${userProfile.target || 'General Fluency'}.`
+          systemInstruction: `You are a VIP English Tutor. Your goal is to help the student learn through conversational practice. Correct their mistakes gently, introduce new vocabulary, and keep the conversation engaging. The student's target is ${userProfile.target || 'General Fluency'}. Respond naturally as a human tutor would.`
         }
       });
 
       sessionRef.current = await sessionPromise;
     } catch (err) {
-      setError("Không thể khởi động micro.");
+      console.error(err);
+      setError("Không thể khởi động micro. Vui lòng cấp quyền micro.");
       setIsConnecting(false);
     }
   };
@@ -247,28 +239,43 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-white p-4">
+    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-white overflow-hidden p-4">
+      {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600 rounded-full blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600 rounded-full blur-[120px]"></div>
       </div>
 
       <div className="w-full max-w-2xl flex flex-col items-center gap-8 relative z-10">
+        
+        {/* Header */}
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-indigo-500/20 px-4 py-1.5 rounded-full border border-indigo-500/30 mb-4 animate-pop-in">
              <Sparkles className="w-4 h-4 text-indigo-400" />
              <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">VIP Voice Room</span>
           </div>
           <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Gia sư AI Trực tuyến</h2>
+          <p className="text-slate-400 text-sm">Học tập qua giao tiếp thời gian thực không độ trễ</p>
         </div>
 
+        {/* Visualizer / Avatar */}
         <div className="relative flex items-center justify-center py-12">
+           {/* Animated Circles */}
            <div className={`absolute w-40 h-40 bg-indigo-500/20 rounded-full transition-transform duration-500 ${isSpeaking ? 'scale-[2.5] opacity-0' : 'scale-100 opacity-100'} animate-pulse`}></div>
+           <div className={`absolute w-40 h-40 border-2 border-indigo-500/40 rounded-full transition-all duration-300 ${isSpeaking ? 'scale-[2.2]' : 'scale-100'}`}></div>
+           <div className={`absolute w-40 h-40 border border-purple-500/40 rounded-full transition-all duration-500 delay-100 ${isSpeaking ? 'scale-[2.8]' : 'scale-100'}`}></div>
+
            <div className={`relative w-40 h-40 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-500/20 border-4 border-white/10 ${isSpeaking ? 'animate-float' : ''}`}>
              <Volume2 className={`w-16 h-16 text-white transition-all ${isSpeaking ? 'scale-110' : 'scale-100'}`} />
+             {isActive && (
+               <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full border-4 border-slate-950 flex items-center justify-center">
+                  <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+               </div>
+             )}
            </div>
         </div>
 
+        {/* Transcription Area */}
         <div className="w-full bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/5 h-64 overflow-y-auto p-6 flex flex-col gap-4 no-scrollbar shadow-inner">
            {transcription.length === 0 && !isActive && !isConnecting && (
               <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center px-8">
@@ -279,7 +286,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
            {isConnecting && (
               <div className="h-full flex flex-col items-center justify-center gap-3">
                  <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                 <p className="text-indigo-400 font-medium text-sm">Đang kết nối...</p>
+                 <p className="text-indigo-400 font-medium text-sm">Đang kết nối WebSocket...</p>
               </div>
            )}
            {transcription.map((t, idx) => (
@@ -291,28 +298,38 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
            ))}
         </div>
 
+        {/* Controls */}
         <div className="flex items-center gap-6 pb-8">
-           <button onClick={onClose} className="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all group border border-white/5">
-              <PhoneOff className="w-6 h-6 text-red-500" />
+           <button 
+             onClick={onClose}
+             className="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all active:scale-95 group border border-white/5"
+           >
+              <PhoneOff className="w-6 h-6 text-red-500 group-hover:scale-110 transition-transform" />
            </button>
 
            {!isActive ? (
              <button 
                onClick={startSession}
                disabled={isConnecting}
-               className={`h-16 px-10 rounded-full bg-white text-slate-950 font-bold flex items-center gap-3 shadow-xl transition-all ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
+               className={`h-16 px-10 rounded-full bg-white text-slate-950 font-bold flex items-center gap-3 shadow-xl hover:shadow-white/10 transition-all hover:scale-105 active:scale-95 ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
              >
                 {isConnecting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
                 {isConnecting ? 'Đang chuẩn bị...' : 'Bắt đầu Hội thoại'}
              </button>
            ) : (
-             <button onClick={stopSession} className="h-16 px-10 rounded-full bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl border border-white/10">
+             <button 
+               onClick={stopSession}
+               className="h-16 px-10 rounded-full bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 border border-white/10"
+             >
                 <Mic className="w-5 h-5 animate-pulse" />
                 Đang lắng nghe...
              </button>
            )}
 
-           <button onClick={() => setTranscription([])} className="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center border border-white/5">
+           <button 
+             onClick={() => setTranscription([])}
+             className="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all active:scale-95 border border-white/5"
+           >
               <MessageSquare className="w-6 h-6 text-slate-400" />
            </button>
         </div>

@@ -10,6 +10,7 @@ export enum TutorMode {
   THEORY = 'Theory Expert',
   GAME = 'Mini Game Challenge',
   TEST_PREP = 'Test Prep System',
+  LIVE = 'Live AI Tutor',
 }
 
 export interface Attachment {

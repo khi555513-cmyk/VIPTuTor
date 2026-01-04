@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { MessageSquare, Book, Clock, Plus, Trash2, HelpCircle, Bell, PenTool, ChevronLeft, ChevronRight, GraduationCap, Settings, Shield } from 'lucide-react';
+import { MessageSquare, Book, Clock, Plus, Trash2, HelpCircle, Bell, PenTool, ChevronLeft, ChevronRight, GraduationCap, Settings, Shield, Mic } from 'lucide-react';
 import { SavedKnowledgeItem, ChatSession } from '../types';
 
 interface SidebarProps {
@@ -10,8 +10,8 @@ interface SidebarProps {
   onSelectSession: (id: string) => void;
   onDeleteSession: (id: string) => void;
   savedItems: SavedKnowledgeItem[];
-  currentView: 'chat' | 'saved' | 'notifications' | 'test-prep' | 'profile';
-  setCurrentView: (view: 'chat' | 'saved' | 'notifications' | 'test-prep' | 'profile') => void;
+  currentView: 'chat' | 'saved' | 'notifications' | 'test-prep' | 'profile' | 'live';
+  setCurrentView: (view: 'chat' | 'saved' | 'notifications' | 'test-prep' | 'profile' | 'live') => void;
   onOpenHelp: () => void;
   unreadNotificationsCount: number;
   isCollapsed: boolean;
@@ -38,23 +38,25 @@ const Sidebar: React.FC<SidebarProps> = ({
     onClick, 
     icon: Icon, 
     label, 
-    badge 
+    badge,
+    isSpecial
   }: { 
     active: boolean; 
     onClick: () => void; 
     icon: any; 
     label: string; 
-    badge?: number | React.ReactNode 
+    badge?: number | React.ReactNode;
+    isSpecial?: boolean;
   }) => (
     <button 
       onClick={onClick}
       title={isCollapsed ? label : undefined}
-      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors relative group ${active ? 'bg-slate-800 text-white' : 'hover:bg-slate-800/50 text-slate-400 hover:text-white'}`}
+      className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg transition-colors relative group ${active ? 'bg-slate-800 text-white' : 'hover:bg-slate-800/50 text-slate-400 hover:text-white'} ${isSpecial ? 'bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400' : ''}`}
     >
       <div className={`${isCollapsed ? 'mx-auto' : ''}`}>
-        <Icon className="w-5 h-5 flex-shrink-0" />
+        <Icon className={`w-5 h-5 flex-shrink-0 ${isSpecial ? 'text-indigo-400' : ''}`} />
       </div>
-      {!isCollapsed && <span className="text-sm font-medium">{label}</span>}
+      {!isCollapsed && <span className={`text-sm font-medium ${isSpecial ? 'font-bold' : ''}`}>{label}</span>}
       
       {/* Badge handling */}
       {badge && (
@@ -118,6 +120,13 @@ const Sidebar: React.FC<SidebarProps> = ({
              onClick={() => setCurrentView('chat')} 
              icon={MessageSquare} 
              label="Chat" 
+           />
+           <NavButton 
+             active={currentView === 'live'} 
+             onClick={() => setCurrentView('live')} 
+             icon={Mic} 
+             label="Live Voice Tutor" 
+             isSpecial={true}
            />
            <NavButton 
              active={currentView === 'test-prep'} 

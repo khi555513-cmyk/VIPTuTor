@@ -8,6 +8,7 @@ import TestPrepSystem from './components/TestPrepSystem';
 import HelpModal from './components/HelpModal';
 import MiniGame from './components/MiniGame';
 import UserProfileView from './components/UserProfile';
+import LiveTutor from './components/LiveTutor';
 import SubscriptionExpiredModal from './components/SubscriptionExpiredModal';
 import LimitReachedModal from './components/LimitReachedModal';
 import { ChatSession, SavedKnowledgeItem, Message, Role, AppNotification, GameData, UserProfile, DailyUsage } from './types';
@@ -103,7 +104,7 @@ const App: React.FC = () => {
     }
   });
 
-  const [currentView, setCurrentView] = useState<'chat' | 'saved' | 'notifications' | 'test-prep' | 'profile'>('chat');
+  const [currentView, setCurrentView] = useState<'chat' | 'saved' | 'notifications' | 'test-prep' | 'profile' | 'live'>('chat');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -398,6 +399,17 @@ const App: React.FC = () => {
           dailyUsage={dailyUsage}
           onCancelSubscription={handleCancelSubscription}
           onResetApp={handleResetApp}
+        />
+      );
+    }
+
+    if (currentView === 'live') {
+      return (
+        <LiveTutor 
+          onClose={() => setCurrentView('chat')}
+          userProfile={userProfile}
+          checkLimit={() => checkLimit('message')}
+          incrementUsage={() => incrementUsage('message')}
         />
       );
     }

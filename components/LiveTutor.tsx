@@ -95,7 +95,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
             }
 
             const parts = message.serverContent?.modelTurn?.parts;
-            const base64Audio = (parts && parts.length > 0) ? parts[0].inlineData?.data : undefined;
+            const base64Audio = parts?.[0]?.inlineData?.data;
 
             if (base64Audio) {
               setIsSpeaking(true);

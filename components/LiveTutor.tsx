@@ -11,10 +11,15 @@ interface LiveTutorProps {
   incrementUsage: () => void;
 }
 
+interface TranscriptionItem {
+  role: 'user' | 'model';
+  text: string;
+}
+
 const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit, incrementUsage }) => {
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [transcription, setTranscription] = useState<{ role: 'user' | 'model', text: string }[]>([]);
+  const [transcription, setTranscription] = useState<TranscriptionItem[]>([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,7 +76,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.outputTranscription) {
               const text = message.serverContent.outputTranscription.text || '';
-              setTranscription(prev => {
+              setTranscription((prev): TranscriptionItem[] => {
                 const last = prev[prev.length - 1];
                 if (last?.role === 'model') {
                   return [...prev.slice(0, -1), { role: 'model', text: last.text + text }];
@@ -80,7 +85,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
               });
             } else if (message.serverContent?.inputTranscription) {
               const text = message.serverContent.inputTranscription.text || '';
-              setTranscription(prev => {
+              setTranscription((prev): TranscriptionItem[] => {
                 const last = prev[prev.length - 1];
                 if (last?.role === 'user') {
                   return [...prev.slice(0, -1), { role: 'user', text: last.text + text }];
@@ -89,9 +94,8 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
               });
             }
 
-            const modelTurn = message.serverContent?.modelTurn;
-            const parts = modelTurn?.parts;
-            const base64Audio = parts?.[0]?.inlineData?.data;
+            const parts = message.serverContent?.modelTurn?.parts;
+            const base64Audio = (parts && parts.length > 0) ? parts[0].inlineData?.data : undefined;
 
             if (base64Audio) {
               setIsSpeaking(true);

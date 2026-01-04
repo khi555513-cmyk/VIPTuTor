@@ -1,73 +1,120 @@
 
-import React from 'react';
-import { Key, ShieldCheck, Sparkles, Zap, GraduationCap, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { Key, ShieldCheck, Sparkles, Zap, GraduationCap, Lock, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { validateApiKey } from '../services/geminiService';
 
 interface GatewayProps {
-  onAuthorize: () => void;
+  onAuthorized: (key: string) => void;
 }
 
-const Gateway: React.FC<GatewayProps> = ({ onAuthorize }) => {
+const Gateway: React.FC<GatewayProps> = ({ onAuthorized }) => {
+  const [keyInput, setKeyInput] = useState('');
+  const [isValidating, setIsValidating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleValidate = async () => {
+    if (!keyInput.trim()) {
+      setError("Vui lòng nhập API Key.");
+      return;
+    }
+
+    setError(null);
+    setIsValidating(true);
+
+    const isValid = await validateApiKey(keyInput.trim());
+    
+    if (isValid) {
+      onAuthorized(keyInput.trim());
+    } else {
+      setError("API Key không hợp lệ hoặc bị cấm tại vùng của bạn.");
+      setIsValidating(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0f172a] flex flex-col items-center justify-center p-6 overflow-hidden">
+    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 overflow-hidden">
       {/* Background Decor */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600 rounded-full blur-[120px] opacity-20"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600 rounded-full blur-[120px] opacity-20"></div>
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600 rounded-full blur-[150px] opacity-10 animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600 rounded-full blur-[150px] opacity-10 animate-pulse"></div>
       </div>
 
-      <div className="w-full max-w-md relative z-10 text-center space-y-8 animate-fade-in">
+      <div className="w-full max-w-lg relative z-10 text-center space-y-8 animate-fade-in">
         {/* Logo Section */}
         <div className="flex flex-col items-center">
-          <div className="w-20 h-20 bg-gradient-to-tr from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-500/20 mb-6 animate-float">
-             <GraduationCap className="w-12 h-12 text-white" />
+          <div className="w-24 h-24 bg-gradient-to-tr from-indigo-500 via-indigo-600 to-violet-700 rounded-[2rem] flex items-center justify-center shadow-[0_0_50px_rgba(79,70,229,0.3)] mb-8 animate-float">
+             <GraduationCap className="w-14 h-14 text-white" />
           </div>
-          <h1 className="text-4xl font-black text-white tracking-tight mb-2">
-            VIP<span className="text-indigo-500">Tutor</span> <span className="text-sm font-bold bg-white/10 px-2 py-0.5 rounded ml-1 text-indigo-300">PRO</span>
+          <h1 className="text-5xl font-black text-white tracking-tighter mb-2">
+            VIP<span className="text-indigo-500">Tutor</span> <span className="text-xs font-bold bg-indigo-500/20 px-2 py-1 rounded-md text-indigo-400 align-top ml-1">AI 3.0</span>
           </h1>
-          <p className="text-slate-400 text-sm">Hệ thống gia sư AI thông minh & bảo mật nhất</p>
+          <p className="text-slate-400 text-lg font-medium">Khám phá sức mạnh tri thức không giới hạn</p>
         </div>
 
-        {/* Feature Highlights */}
-        <div className="grid grid-cols-2 gap-3 text-left">
-           <div className="bg-white/5 border border-white/10 p-4 rounded-xl backdrop-blur-sm">
-              <Zap className="w-5 h-5 text-indigo-400 mb-2" />
-              <h3 className="text-white text-xs font-bold uppercase tracking-wider mb-1">Tốc độ</h3>
-              <p className="text-slate-500 text-[10px] leading-relaxed">Phản hồi tức thì với Gemini 3 Pro.</p>
+        {/* Action Card */}
+        <div className="bg-slate-900/40 backdrop-blur-2xl border border-white/10 p-8 md:p-10 rounded-[2.5rem] shadow-2xl space-y-8">
+           <div className="space-y-2">
+              <div className="flex items-center justify-center gap-2 text-indigo-400 text-sm font-bold uppercase tracking-[0.2em]">
+                <Lock className="w-4 h-4" />
+                <span>Xác thực bảo mật</span>
+              </div>
+              <p className="text-slate-500 text-sm">Nhập hoặc dán Google Gemini API Key để bắt đầu phiên học tập.</p>
            </div>
-           <div className="bg-white/5 border border-white/10 p-4 rounded-xl backdrop-blur-sm">
-              <ShieldCheck className="w-5 h-5 text-green-400 mb-2" />
-              <h3 className="text-white text-xs font-bold uppercase tracking-wider mb-1">Bảo mật</h3>
-              <p className="text-slate-500 text-[10px] leading-relaxed">Dữ liệu được mã hóa đầu cuối AES-256.</p>
-           </div>
-        </div>
 
-        {/* Action Section */}
-        <div className="bg-white/5 border border-white/10 p-8 rounded-3xl backdrop-blur-md shadow-inner space-y-6">
-           <div className="flex items-center justify-center gap-3 text-indigo-300 text-sm font-medium">
-              <Lock className="w-4 h-4" />
-              <span>Yêu cầu xác thực API Key</span>
+           <div className="space-y-4">
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                   <Key className={`w-5 h-5 transition-colors ${error ? 'text-red-400' : 'text-slate-500 group-focus-within:text-indigo-500'}`} />
+                </div>
+                <input 
+                  type="password"
+                  value={keyInput}
+                  onChange={(e) => { setKeyInput(e.target.value); setError(null); }}
+                  placeholder="AIzaSyB..."
+                  className={`w-full bg-slate-800/50 border-2 pl-14 pr-5 py-5 rounded-2xl text-white font-mono text-sm outline-none transition-all placeholder:text-slate-700 ${error ? 'border-red-500/50 focus:border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.1)]' : 'border-white/5 focus:border-indigo-500 focus:bg-slate-800 shadow-inner'}`}
+                />
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 text-red-400 text-xs font-bold animate-slide-up bg-red-400/10 p-3 rounded-xl border border-red-400/20">
+                   <AlertCircle className="w-4 h-4" />
+                   {error}
+                </div>
+              )}
+
+              <button 
+                onClick={handleValidate}
+                disabled={isValidating || !keyInput}
+                className="w-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-600 bg-[length:200%_auto] hover:bg-right text-white py-5 rounded-2xl font-black shadow-xl shadow-indigo-900/20 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 text-lg disabled:opacity-50 disabled:grayscale disabled:hover:scale-100"
+              >
+                {isValidating ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    Đang kiểm tra...
+                  </>
+                ) : (
+                  <>
+                    Kích hoạt Gia sư AI
+                    <ArrowRight className="w-6 h-6" />
+                  </>
+                )}
+              </button>
            </div>
            
-           <p className="text-slate-400 text-xs leading-relaxed px-4">
-             Để sử dụng dịch vụ VIP, bạn cần kết nối API Key từ dự án GCP của mình. Hệ thống sẽ ghi nhớ Key cho lần sử dụng sau.
-           </p>
-
-           <button 
-             onClick={onAuthorize}
-             className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white py-4 rounded-2xl font-bold shadow-xl shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-3 text-lg"
-           >
-              <Key className="w-6 h-6" />
-              Kết nối & Bắt đầu
-           </button>
-           
-           <div className="flex items-center justify-center gap-2 text-[10px] text-slate-500 uppercase tracking-widest font-bold">
-              <Sparkles className="w-3 h-3" />
-              Harriss Studio • AI Powered
+           <div className="pt-4 border-t border-white/5 flex flex-col gap-4">
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-indigo-400 text-xs font-bold hover:text-indigo-300 transition-colors flex items-center justify-center gap-2">
+                 Chưa có API Key? Lấy miễn phí tại Google AI Studio <ArrowRight className="w-3 h-3" />
+              </a>
+              <div className="flex items-center justify-center gap-4 text-slate-600">
+                 <div className="flex items-center gap-1.5"><ShieldCheck className="w-3.5 h-3.5" /> <span className="text-[10px] font-bold uppercase tracking-wider">End-to-End Encrypted</span></div>
+                 <div className="w-1 h-1 bg-slate-800 rounded-full"></div>
+                 <div className="flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> <span className="text-[10px] font-bold uppercase tracking-wider">Low Latency</span></div>
+              </div>
            </div>
         </div>
 
-        <p className="text-slate-600 text-[10px]">
-           By clicking Start, you agree to our Terms of Service regarding Gemini API usage.
+        <p className="text-slate-700 text-[10px] font-bold uppercase tracking-widest">
+           Harriss Studio • Powered by Google Gemini 3 Pro
         </p>
       </div>
     </div>

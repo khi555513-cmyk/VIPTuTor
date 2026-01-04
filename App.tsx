@@ -11,52 +11,36 @@ import UserProfileView from './components/UserProfile';
 import LiveTutor from './components/LiveTutor';
 import SubscriptionExpiredModal from './components/SubscriptionExpiredModal';
 import LimitReachedModal from './components/LimitReachedModal';
-import Gateway from './components/Gateway';
-import { ChatSession, SavedKnowledgeItem, Message, Role, AppNotification, GameData, UserProfile, DailyUsage } from './types';
+import { ChatSession, SavedKnowledgeItem, Message, Role, AppNotification, GameData, UserProfile, DailyUsage, ApiKeyInfo } from './types';
 import { TIER_LIMITS } from './constants';
-// Added Loader2 to the imports
-import { Menu, Loader2 } from 'lucide-react';
-
-declare global {
-  interface Window {
-    // Changed aistudio type to any to resolve conflict with existing global AIStudio type
-    aistudio: any;
-  }
-}
+import { Menu } from 'lucide-react';
 
 const App: React.FC = () => {
   const isResettingRef = useRef(false);
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  // Default authorized as API key is now strictly from environment
+  const [isAuthorized] = useState<boolean>(true);
+  
+  // API key states removed to strictly follow GenAI guidelines
+  const [apiKeys, setApiKeys] = useState<ApiKeyInfo[]>(() => {
+    const saved = localStorage.getItem('vip_tutor_api_keys');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [activeKeyId, setActiveKeyId] = useState<string | null>(() => {
+    return localStorage.getItem('vip_tutor_active_key_id');
+  });
 
-  // Check for API Key on mount
+  // Persist keys to localStorage (backward compatibility)
   useEffect(() => {
-    const checkAuth = async () => {
-      if (window.aistudio) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setIsAuthorized(hasKey);
-      } else {
-        // Fallback for environment without aistudio bridge
-        setIsAuthorized(true);
-      }
-    };
-    checkAuth();
-  }, []);
-
-  const handleAuthorize = async () => {
-    if (window.aistudio) {
-      await window.aistudio.openSelectKey();
-      // Per instructions: assume success after triggering the dialog
-      setIsAuthorized(true);
-    }
-  };
+    localStorage.setItem('vip_tutor_api_keys', JSON.stringify(apiKeys));
+    if (activeKeyId) localStorage.setItem('vip_tutor_active_key_id', activeKeyId);
+  }, [apiKeys, activeKeyId]);
 
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_sessions');
       const parsed = saved ? JSON.parse(saved) : null;
-      if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+      if (parsed && Array.isArray(parsed) && parsed.length > 0) return parsed;
       return [{ id: 'default', title: 'New Session', createdAt: Date.now(), messages: [] }];
     } catch (e) {
       return [{ id: 'default', title: 'New Session', createdAt: Date.now(), messages: [] }];
@@ -68,9 +52,7 @@ const App: React.FC = () => {
       const savedSessions = localStorage.getItem('vip_tutor_sessions');
       if (savedSessions) {
         const parsed = JSON.parse(savedSessions);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-             return parsed[parsed.length - 1].id; 
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed[parsed.length - 1].id; 
       }
       return 'default';
     } catch (e) {
@@ -82,31 +64,22 @@ const App: React.FC = () => {
     try {
       const saved = localStorage.getItem('vip_tutor_saved');
       return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   });
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_notifications');
-      if (saved) return JSON.parse(saved);
-      return [];
-    } catch (e) {
-      return [];
-    }
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) { return []; }
   });
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem('vip_tutor_profile');
       const defaultProfile: UserProfile = { 
-        name: 'Bạn Học Viên', 
-        joinDate: Date.now(), 
-        target: 'Giao tiếp cơ bản',
-        accountTier: 'basic',
-        subscriptionExpiry: null,
-        usedCodes: [] 
+        name: 'Bạn Học Viên', joinDate: Date.now(), target: 'Giao tiếp cơ bản',
+        accountTier: 'basic', subscriptionExpiry: null, usedCodes: [] 
       };
       return saved ? { ...defaultProfile, ...JSON.parse(saved) } : defaultProfile;
     } catch (e) {
@@ -119,10 +92,8 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('vip_tutor_usage');
       const today = new Date().toISOString().split('T')[0];
       if (saved) {
-        const parsed: DailyUsage = JSON.parse(saved);
-        if (parsed.date === today) {
-          return parsed;
-        }
+        const parsed = JSON.parse(saved);
+        if (parsed.date === today) return parsed;
       }
       return { date: today, messagesCount: 0, testsGenerated: 0, gamesPlayed: 0 };
     } catch (e) {
@@ -136,7 +107,7 @@ const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [fullScreenGameData, setFullScreenGameData] = useState<GameData | null>(null);
   const [showExpiryModal, setShowExpiryModal] = useState(false);
-  const [expiredPackageName, setExpiredPackageName] = useState('');
+  const [expiredPackageName] = useState('');
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [limitModalMessage, setLimitModalMessage] = useState('');
 
@@ -164,33 +135,26 @@ const App: React.FC = () => {
     setNotifications(prev => [note, ...prev]);
   };
 
-  useEffect(() => {
-    const checkExpiry = () => {
-      if (userProfile.accountTier !== 'basic' && userProfile.subscriptionExpiry) {
-        if (Date.now() > userProfile.subscriptionExpiry) {
-          const oldTierName = userProfile.accountTier === 'vip' ? 'VIP' : 'PRO';
-          setExpiredPackageName(oldTierName);
-          setShowExpiryModal(true);
-          setUserProfile(prev => ({ ...prev, accountTier: 'basic', subscriptionExpiry: null }));
-          handleAddNotification({
-            id: Date.now().toString(),
-            title: 'Hết hạn gói cước',
-            message: `Gói ${oldTierName} của bạn đã hết hạn. Tài khoản đã quay về gói Cơ Bản.`,
-            type: 'system',
-            timestamp: Date.now(),
-            isRead: false
-          });
-        }
-      }
-    };
-    checkExpiry();
-    const interval = setInterval(checkExpiry, 30000);
-    return () => clearInterval(interval);
-  }, [userProfile.subscriptionExpiry, userProfile.accountTier]);
+  const handleAddApiKey = (info: ApiKeyInfo) => {
+    setApiKeys(prev => [info, ...prev]);
+    if (!activeKeyId) setActiveKeyId(info.id);
+  };
+
+  const handleRemoveApiKey = (id: string) => {
+    const updated = apiKeys.filter(k => k.id !== id);
+    setApiKeys(updated);
+    if (activeKeyId === id) {
+      setActiveKeyId(updated.length > 0 ? updated[0].id : null);
+    }
+  };
+
+  const handleApiError = () => {
+    console.error("Critical: Gemini API error encountered.");
+    alert("Có lỗi xảy ra khi kết nối tới Gemini API. Vui lòng kiểm tra lại cấu hình hệ thống.");
+  };
 
   const checkLimit = (type: 'message' | 'test' | 'game'): boolean => {
-    const tier = userProfile.accountTier;
-    const limits = TIER_LIMITS[tier];
+    const limits = TIER_LIMITS[userProfile.accountTier];
     if (type === 'message' && dailyUsage.messagesCount >= limits.messages) return false;
     if (type === 'test' && dailyUsage.testsGenerated >= limits.tests) return false;
     if (type === 'game' && dailyUsage.gamesPlayed >= limits.games) return false;
@@ -200,9 +164,7 @@ const App: React.FC = () => {
   const incrementUsage = (type: 'message' | 'test' | 'game') => {
     setDailyUsage(prev => {
       const today = new Date().toISOString().split('T')[0];
-      if (prev.date !== today) {
-        return { date: today, messagesCount: type === 'message' ? 1 : 0, testsGenerated: type === 'test' ? 1 : 0, gamesPlayed: type === 'game' ? 1 : 0 };
-      }
+      if (prev.date !== today) return { date: today, messagesCount: type === 'message' ? 1 : 0, testsGenerated: type === 'test' ? 1 : 0, gamesPlayed: type === 'game' ? 1 : 0 };
       return {
         ...prev,
         messagesCount: type === 'message' ? prev.messagesCount + 1 : prev.messagesCount,
@@ -255,29 +217,6 @@ const App: React.FC = () => {
     handleAddNotification({ id: Date.now().toString(), title: 'Đã lưu kiến thức', message: `Đã lưu "${item.title}" vào thư viện.`, type: 'system', timestamp: Date.now(), isRead: false });
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const handleApiError = () => {
-    setIsAuthorized(false);
-  };
-
-  const renderContent = () => {
-    switch (currentView) {
-      case 'test-prep': return <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => checkLimit('test')} incrementUsage={() => incrementUsage('test')} onApiError={handleApiError} />;
-      case 'saved': return <SavedView items={savedItems} onDelete={(id) => setSavedItems(prev => prev.filter(i => i.id !== id))} />;
-      case 'notifications': return <NotificationView notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, isRead: true})))} onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))} onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, isRead: true} : n))} />;
-      case 'profile': return <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => setUserProfile(p => ({...p, accountTier: 'basic', subscriptionExpiry: null}))} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} onManageApiKey={handleAuthorize} />;
-      case 'live': return <LiveTutor onClose={() => setCurrentView('chat')} userProfile={userProfile} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} />;
-      default: return <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { if (checkLimit('game')) { incrementUsage('game'); setFullScreenGameData(data); } else { setLimitModalMessage("Hết lượt chơi game hôm nay."); setIsLimitModalOpen(true); } }} onAddNotification={handleAddNotification} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} onApiError={handleApiError} />;
-    }
-  };
-
-  if (isAuthorized === null) return <div className="h-screen w-screen bg-slate-900 flex items-center justify-center"><Loader2 className="w-10 h-10 text-indigo-500 animate-spin" /></div>;
-
-  if (!isAuthorized) {
-    return <Gateway onAuthorize={handleAuthorize} />;
-  }
-
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden relative">
       <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
@@ -290,23 +229,24 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {isMobileMenuOpen && <div className="absolute inset-0 bg-black/50 z-[45] md:hidden" onClick={() => setIsMobileMenuOpen(false)}></div>}
-
       <div className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64'}`}>
-        <Sidebar sessions={sessions} currentSessionId={currentSessionId} onNewSession={handleNewSession} onSelectSession={(id) => { setCurrentSessionId(id); setIsMobileMenuOpen(false); }} onDeleteSession={handleDeleteSession} savedItems={savedItems} currentView={currentView} setCurrentView={(view) => { setCurrentView(view); setIsMobileMenuOpen(false); }} onOpenHelp={() => setIsHelpOpen(true)} unreadNotificationsCount={unreadCount} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+        <Sidebar sessions={sessions} currentSessionId={currentSessionId} onNewSession={handleNewSession} onSelectSession={(id) => { setCurrentSessionId(id); setIsMobileMenuOpen(false); }} onDeleteSession={handleDeleteSession} savedItems={savedItems} currentView={currentView} setCurrentView={(view) => { setCurrentView(view); setIsMobileMenuOpen(false); }} onOpenHelp={() => setIsHelpOpen(true)} unreadNotificationsCount={notifications.filter(n => !n.isRead).length} isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
       </div>
 
       <main className="flex-1 flex flex-col h-full w-full min-w-0" role="main">
         {currentView !== 'chat' && (
           <header className="md:hidden h-14 bg-white border-b flex items-center px-4 justify-between flex-shrink-0">
              <span className="font-bold text-gray-800">VIP Tutor</span>
-             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600" aria-label="Open Menu">
-               <Menu className="w-6 h-6" />
-             </button>
+             <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600"> <Menu className="w-6 h-6" /> </button>
           </header>
         )}
         <div className="flex-1 overflow-hidden relative">
-          {renderContent()}
+          {currentView === 'test-prep' ? <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => checkLimit('test')} incrementUsage={() => incrementUsage('test')} onApiError={handleApiError} /> : 
+           currentView === 'saved' ? <SavedView items={savedItems} onDelete={(id) => setSavedItems(prev => prev.filter(i => i.id !== id))} /> :
+           currentView === 'notifications' ? <NotificationView notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, isRead: true})))} onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))} onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, isRead: true} : n))} /> :
+           currentView === 'profile' ? <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => setUserProfile(p => ({...p, accountTier: 'basic', subscriptionExpiry: null}))} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} apiKeys={apiKeys} onAddApiKey={handleAddApiKey} onRemoveApiKey={handleRemoveApiKey} activeKeyId={activeKeyId} onSetActiveKey={setActiveKeyId} /> :
+           currentView === 'live' ? <LiveTutor onClose={() => setCurrentView('chat')} userProfile={userProfile} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} /> :
+           <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { if (checkLimit('game')) { incrementUsage('game'); setFullScreenGameData(data); } else { setLimitModalMessage("Hết lượt chơi game."); setIsLimitModalOpen(true); } }} onAddNotification={handleAddNotification} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} onApiError={handleApiError} />}
         </div>
       </main>
     </div>

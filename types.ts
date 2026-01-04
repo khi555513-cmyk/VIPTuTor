@@ -1,4 +1,5 @@
 
+
 export enum Role {
   USER = 'user',
   MODEL = 'model',
@@ -45,20 +46,28 @@ export interface SavedKnowledgeItem {
   tags?: string[];
 }
 
+export interface ApiKeyInfo {
+  id: string;
+  key: string;
+  label: string;
+  addedAt: number;
+  isValid: boolean;
+}
+
 // Game Types
+export interface GameData {
+  title: string;
+  topic: string;
+  difficulty: string;
+  questions: GameQuestion[];
+}
+
 export interface GameQuestion {
   id: number;
   question: string;
   options: string[];
   correctAnswer: number;
   explanation: string;
-}
-
-export interface GameData {
-  title: string;
-  topic: string;
-  difficulty: string;
-  questions: GameQuestion[];
 }
 
 // Test Prep Types
@@ -123,42 +132,26 @@ export interface UserProfile {
   avatar?: string;
   joinDate: number;
   accountTier: AccountTier;
-  subscriptionExpiry?: number | null; // Timestamp of expiry, null if lifetime or basic
-  usedCodes?: string[]; // List of activation codes already used by this user
+  subscriptionExpiry?: number | null; 
+  usedCodes?: string[]; 
 }
 
 // Usage Stats
 export interface DailyUsage {
-  date: string; // ISO Date String (YYYY-MM-DD)
+  date: string; 
   messagesCount: number;
   testsGenerated: number;
   gamesPlayed: number;
 }
 
-// --- ADMIN SYNC TYPES ---
-export type AdminCommandType = 'LOCK_SCREEN' | 'UNLOCK_SCREEN' | 'SEND_NOTIFICATION' | 'FORCE_LOGOUT' | 'PING' | 'REQUEST_INFO';
-
-export interface AdminCommand {
-  type: AdminCommandType;
-  payload?: any;
-  timestamp: number;
-}
-
+/**
+ * Connection info for sync features.
+ */
 export interface ClientConnectionInfo {
   clientId: string;
   channelName: string;
   status: 'online' | 'offline';
-  lastSync: number;
+  lastSync?: number;
   serverUrl?: string;
   serverApiKey?: string;
-}
-
-// Data sent FROM Student TO Admin
-export interface StudentSyncPayload {
-  type: 'STUDENT_UPDATE' | 'STUDENT_PONG' | 'JOIN_CLASS';
-  clientId: string;
-  profile: UserProfile;
-  status: 'online' | 'idle' | 'locked';
-  currentActivity?: string; // e.g., "Doing Exam", "Chatting"
-  lastActive: number;
 }

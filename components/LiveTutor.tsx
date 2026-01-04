@@ -70,7 +70,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
           },
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.outputTranscription) {
-              const text = message.serverContent.outputTranscription.text;
+              const text = message.serverContent.outputTranscription.text || '';
               setTranscription(prev => {
                 const last = prev[prev.length - 1];
                 if (last?.role === 'model') {
@@ -79,7 +79,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
                 return [...prev, { role: 'model', text }];
               });
             } else if (message.serverContent?.inputTranscription) {
-              const text = message.serverContent.inputTranscription.text;
+              const text = message.serverContent.inputTranscription.text || '';
               setTranscription(prev => {
                 const last = prev[prev.length - 1];
                 if (last?.role === 'user') {
@@ -89,7 +89,10 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
               });
             }
 
-            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+            const modelTurn = message.serverContent?.modelTurn;
+            const parts = modelTurn?.parts;
+            const base64Audio = parts?.[0]?.inlineData?.data;
+
             if (base64Audio) {
               setIsSpeaking(true);
               const ctx = outputAudioContextRef.current!;

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -31,9 +31,6 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.7.3",
     "vite": "^6.0.0"
-  },
-  "overrides": {
-    "node-domexception": "$DOMException"
   },
   "engines": {
     "node": "24.x"

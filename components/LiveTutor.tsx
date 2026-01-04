@@ -1,5 +1,6 @@
 
-import { Mic, MicOff, PhoneOff, Volume2, MessageSquare, Sparkles, Loader2, Play } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Mic, MicOff, PhoneOff, Volume2, MessageSquare, Sparkles, Loader2, Play, Info, Settings2, Languages, Repeat } from 'lucide-react';
 import { GoogleGenAI, Modality, LiveServerMessage, Blob } from '@google/genai';
 import { UserProfile } from '../types';
 
@@ -19,8 +20,9 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
   const [isActive, setIsActive] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [transcription, setTranscription] = useState<TranscriptionItem[]>([]);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [learningMode, setLearningMode] = useState<'conversation' | 'pronunciation'>('conversation');
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const outputAudioContextRef = useRef<AudioContext | null>(null);
@@ -29,20 +31,39 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
   const sessionRef = useRef<any>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const transcriptionEndRef = useRef<HTMLDivElement>(null);
+
+  // Animation states for waves
+  const [waveHeights, setWaveHeights] = useState(Array(15).fill(4));
+
+  useEffect(() => {
+    if (status === 'speaking' || status === 'listening') {
+      const interval = setInterval(() => {
+        setWaveHeights(prev => prev.map(() => Math.floor(Math.random() * 32) + 4));
+      }, 100);
+      return () => clearInterval(interval);
+    } else {
+      setWaveHeights(Array(15).fill(4));
+    }
+  }, [status]);
+
+  useEffect(() => {
+    transcriptionEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [transcription]);
 
   const startSession = async () => {
     if (!checkLimit()) {
-      setError("Bạn đã hết lượt sử dụng trong ngày. Vui lòng nâng cấp gói Pro.");
+      setError("Hết lượt sử dụng VIP hôm nay. Nâng cấp ngay!");
       return;
     }
 
     setIsConnecting(true);
     setError(null);
+    setStatus('thinking');
 
     try {
-      // CRITICAL: Create GoogleGenAI instance right before the call and use process.env.API_KEY exclusively.
       const apiKey = process.env.API_KEY;
-      if (!apiKey) throw new Error("API Key not found in environment variables");
+      if (!apiKey) throw new Error("API Key configuration missing");
       
       const ai = new GoogleGenAI({ apiKey: apiKey });
       
@@ -52,13 +73,17 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
+      const systemInstruction = learningMode === 'pronunciation' 
+        ? `You are an expert English phonetics coach. Listen to the student's pronunciation, correct it precisely, and explain how to position the mouth/tongue. Be very detailed about sounds like 'th', 'r', and 'l'. Target: ${userProfile.target}.`
+        : `You are a friendly and professional English Tutor. Engage in natural conversation. If the student makes a mistake, correct it naturally in the flow of talk. Target: ${userProfile.target}.`;
+
       const sessionPromise = ai.live.connect({
         model: 'gemini-2.5-flash-native-audio-preview-09-2025',
         callbacks: {
           onopen: () => {
-            console.log('Live session opened');
             setIsActive(true);
             setIsConnecting(false);
+            setStatus('listening');
             incrementUsage();
 
             const source = audioContextRef.current!.createMediaStreamSource(stream);
@@ -68,7 +93,6 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
             scriptProcessor.onaudioprocess = (e) => {
               const inputData = e.inputBuffer.getChannelData(0);
               const pcmBlob = createBlob(inputData);
-              // CRITICAL: Solely rely on sessionPromise resolves to send data to prevent race conditions.
               sessionPromise.then((session) => {
                 session.sendRealtimeInput({ media: pcmBlob });
               });
@@ -80,46 +104,35 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
           onmessage: async (message: LiveServerMessage) => {
             if (message.serverContent?.outputTranscription) {
               const text = message.serverContent.outputTranscription.text || '';
-              setTranscription((prev): TranscriptionItem[] => {
+              setTranscription(prev => {
                 const last = prev[prev.length - 1];
-                if (last?.role === 'model') {
-                  return [...prev.slice(0, -1), { role: 'model', text: last.text + text }];
-                }
+                if (last?.role === 'model') return [...prev.slice(0, -1), { role: 'model', text: last.text + text }];
                 return [...prev, { role: 'model', text }];
               });
             } else if (message.serverContent?.inputTranscription) {
               const text = message.serverContent.inputTranscription.text || '';
-              setTranscription((prev): TranscriptionItem[] => {
+              setTranscription(prev => {
                 const last = prev[prev.length - 1];
-                if (last?.role === 'user') {
-                  return [...prev.slice(0, -1), { role: 'user', text: last.text + text }];
-                }
+                if (last?.role === 'user') return [...prev.slice(0, -1), { role: 'user', text: last.text + text }];
                 return [...prev, { role: 'user', text }];
               });
             }
 
-            const parts = message.serverContent?.modelTurn?.parts;
-            const base64Audio = parts?.[0]?.inlineData?.data;
+            const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
 
             if (base64Audio) {
-              setIsSpeaking(true);
+              setStatus('speaking');
               const ctx = outputAudioContextRef.current!;
               nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
               
-              // Handle raw PCM stream decoding as per example.
-              const audioBuffer = await decodeAudioData(
-                decode(base64Audio),
-                ctx,
-                24000,
-                1
-              );
+              const audioBuffer = await decodeAudioData(decode(base64Audio), ctx, 24000, 1);
               
               const source = ctx.createBufferSource();
               source.buffer = audioBuffer;
               source.connect(ctx.destination);
               source.addEventListener('ended', () => {
                 sourcesRef.current.delete(source);
-                if (sourcesRef.current.size === 0) setIsSpeaking(false);
+                if (sourcesRef.current.size === 0) setStatus('listening');
               });
 
               source.start(nextStartTimeRef.current);
@@ -128,21 +141,17 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
             }
 
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => s.stop());
+              sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
-              setIsSpeaking(false);
+              setStatus('listening');
             }
           },
           onerror: (e) => {
-            console.error('Live session error:', e);
-            setError("Lỗi kết nối âm thanh. Vui lòng kiểm tra micro.");
+            setError("Mất kết nối âm thanh. Vui lòng thử lại.");
             stopSession();
           },
-          onclose: () => {
-            console.log('Live session closed');
-            stopSession();
-          }
+          onclose: () => stopSession()
         },
         config: {
           responseModalities: [Modality.AUDIO],
@@ -151,46 +160,29 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: `You are a professional English Tutor. Your goal is to help the student learn through conversational practice. Correct their mistakes gently, introduce new vocabulary, and keep the conversation engaging. The student's target is ${userProfile.target || 'General Fluency'}. Respond naturally as a human tutor would.`
+          systemInstruction: systemInstruction
         }
       });
 
       sessionRef.current = await sessionPromise;
     } catch (err) {
-      console.error(err);
-      setError("Không thể khởi động micro hoặc lỗi API Key. Vui lòng kiểm tra lại.");
+      setError("Không thể khởi động micro. Vui lòng kiểm tra quyền truy cập.");
       setIsConnecting(false);
+      setStatus('idle');
     }
   };
 
   const stopSession = () => {
     setIsActive(false);
     setIsConnecting(false);
-    setIsSpeaking(false);
+    setStatus('idle');
     
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
-    
-    if (scriptProcessorRef.current) {
-      scriptProcessorRef.current.disconnect();
-      scriptProcessorRef.current = null;
-    }
+    if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    if (scriptProcessorRef.current) scriptProcessorRef.current.disconnect();
+    if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
+    if (outputAudioContextRef.current) outputAudioContextRef.current.close().catch(() => {});
 
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-
-    if (outputAudioContextRef.current) {
-      outputAudioContextRef.current.close().catch(() => {});
-      outputAudioContextRef.current = null;
-    }
-
-    sourcesRef.current.forEach(s => {
-      try { s.stop(); } catch(e) {}
-    });
+    sourcesRef.current.forEach(s => { try { s.stop(); } catch(e) {} });
     sourcesRef.current.clear();
     nextStartTimeRef.current = 0;
   };
@@ -198,156 +190,181 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
   const createBlob = (data: Float32Array): Blob => {
     const l = data.length;
     const int16 = new Int16Array(l);
-    for (let i = 0; i < l; i++) {
-      int16[i] = data[i] * 32768;
-    }
-    return {
-      data: encode(new Uint8Array(int16.buffer)),
-      mimeType: 'audio/pcm;rate=16000',
-    };
+    for (let i = 0; i < l; i++) int16[i] = data[i] * 32768;
+    return { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
   };
 
-  const decode = (base64: string) => {
-    const binaryString = atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
+  const decode = (b64: string) => {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return bytes;
   };
 
   const encode = (bytes: Uint8Array) => {
-    let binary = '';
-    const len = bytes.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
+    let bin = '';
+    for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
   };
 
-  const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> => {
+  const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, rate: number, channels: number): Promise<AudioBuffer> => {
     const dataInt16 = new Int16Array(data.buffer);
-    const frameCount = dataInt16.length / numChannels;
-    const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-    for (let channel = 0; channel < numChannels; channel++) {
-      const channelData = buffer.getChannelData(channel);
-      for (let i = 0; i < frameCount; i++) {
-        channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-      }
+    const count = dataInt16.length / channels;
+    const buffer = ctx.createBuffer(channels, count, rate);
+    for (let c = 0; c < channels; c++) {
+      const cData = buffer.getChannelData(c);
+      for (let i = 0; i < count; i++) cData[i] = dataInt16[i * channels + c] / 32768.0;
     }
     return buffer;
   };
 
-  useEffect(() => {
-    return () => stopSession();
-  }, []);
+  useEffect(() => { return () => stopSession(); }, []);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center text-white overflow-hidden p-4">
-      {/* Background decoration */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-600 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-600 rounded-full blur-[120px]"></div>
+    <div className="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-between text-white overflow-hidden font-sans">
+      {/* Dynamic Background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none transition-opacity duration-1000">
+        <div className={`absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/20 rounded-full blur-[120px] transition-all duration-1000 ${status === 'speaking' ? 'scale-125 opacity-40' : 'scale-100 opacity-20'}`}></div>
+        <div className={`absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[120px] transition-all duration-1000 ${status === 'listening' ? 'scale-125 opacity-40' : 'scale-100 opacity-20'}`}></div>
       </div>
 
-      <div className="w-full max-w-2xl flex flex-col items-center gap-8 relative z-10">
-        
-        {/* Header */}
-        <div className="text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-500/20 px-4 py-1.5 rounded-full border border-indigo-500/30 mb-4 animate-pop-in">
-             <Sparkles className="w-4 h-4 text-indigo-400" />
-             <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">Voice Room</span>
+      {/* Header */}
+      <div className="w-full flex items-center justify-between px-6 pt-8 z-10 shrink-0">
+        <button onClick={onClose} className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl backdrop-blur-md transition-all active:scale-95">
+          <ArrowLeft className="w-5 h-5 text-slate-300" />
+        </button>
+        <div className="flex flex-col items-center">
+          <div className="flex items-center gap-2 mb-1">
+             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Live Session Active</span>
           </div>
-          <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Gia sư AI Trực tuyến</h2>
-          <p className="text-slate-400 text-sm">Học tập qua giao tiếp thời gian thực không độ trễ</p>
+          <h2 className="text-lg font-bold">Gia sư Giọng nói</h2>
         </div>
-
-        {/* Visualizer / Avatar */}
-        <div className="relative flex items-center justify-center py-12">
-           {/* Animated Circles */}
-           <div className={`absolute w-40 h-40 bg-indigo-500/20 rounded-full transition-transform duration-500 ${isSpeaking ? 'scale-[2.5] opacity-0' : 'scale-100 opacity-100'} animate-pulse`}></div>
-           <div className={`absolute w-40 h-40 border-2 border-indigo-500/40 rounded-full transition-all duration-300 ${isSpeaking ? 'scale-[2.2]' : 'scale-100'}`}></div>
-           <div className={`absolute w-40 h-40 border border-purple-500/40 rounded-full transition-all duration-500 delay-100 ${isSpeaking ? 'scale-[2.8]' : 'scale-100'}`}></div>
-
-           <div className={`relative w-40 h-40 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-full flex items-center justify-center shadow-2xl shadow-indigo-500/20 border-4 border-white/10 ${isSpeaking ? 'animate-float' : ''}`}>
-             <Volume2 className={`w-16 h-16 text-white transition-all ${isSpeaking ? 'scale-110' : 'scale-100'}`} />
-             {isActive && (
-               <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full border-4 border-slate-950 flex items-center justify-center">
-                  <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
-               </div>
-             )}
-           </div>
-        </div>
-
-        {/* Transcription Area */}
-        <div className="w-full bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-white/5 h-64 overflow-y-auto p-6 flex flex-col gap-4 no-scrollbar shadow-inner">
-           {transcription.length === 0 && !isActive && !isConnecting && (
-              <div className="h-full flex flex-col items-center justify-center text-slate-500 text-center px-8">
-                 <Mic className="w-10 h-10 mb-4 opacity-20" />
-                 <p className="text-sm">Bấm "Bắt đầu" để trò chuyện cùng Gia sư AI.</p>
-              </div>
-           )}
-           {isConnecting && (
-              <div className="h-full flex flex-col items-center justify-center gap-3">
-                 <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
-                 <p className="text-indigo-400 font-medium text-sm">Đang kết nối WebSocket...</p>
-              </div>
-           )}
-           {transcription.map((t, idx) => (
-             <div key={idx} className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>
-                <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-sm font-medium ${t.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-800 text-slate-200 rounded-tl-none'}`}>
-                   {t.text}
-                </div>
-             </div>
-           ))}
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-6 pb-8">
-           <button 
-             onClick={onClose}
-             className="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all active:scale-95 group border border-white/5"
-           >
-              <PhoneOff className="w-6 h-6 text-red-500 group-hover:scale-110 transition-transform" />
-           </button>
-
-           {!isActive ? (
-             <button 
-               onClick={startSession}
-               disabled={isConnecting}
-               className={`h-16 px-10 rounded-full bg-white text-slate-950 font-bold flex items-center gap-3 shadow-xl hover:shadow-white/10 transition-all hover:scale-105 active:scale-95 ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
-             >
-                {isConnecting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
-                {isConnecting ? 'Đang chuẩn bị...' : 'Bắt đầu Hội thoại'}
-             </button>
-           ) : (
-             <button 
-               onClick={stopSession}
-               className="h-16 px-10 rounded-full bg-indigo-600 text-white font-bold flex items-center gap-3 shadow-xl hover:shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95 border border-white/10"
-             >
-                <Mic className="w-5 h-5 animate-pulse" />
-                Đang lắng nghe...
-             </button>
-           )}
-
-           <button 
-             onClick={() => setTranscription([])}
-             className="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-all active:scale-95 border border-white/5"
-           >
-              <MessageSquare className="w-6 h-6 text-slate-400" />
-           </button>
-        </div>
-
-        {error && (
-           <div className="bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-2xl text-red-400 text-xs font-medium flex items-center gap-2 animate-pop-in">
-              <MicOff className="w-4 h-4" />
-              {error}
-           </div>
-        )}
+        <button className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl backdrop-blur-md transition-all active:scale-95">
+          <Settings2 className="w-5 h-5 text-slate-300" />
+        </button>
       </div>
+
+      {/* Central Visualizer Section */}
+      <div className="flex-1 w-full flex flex-col items-center justify-center p-6 gap-10 relative z-10">
+        
+        {/* Visual Feedback Circle */}
+        <div className="relative group">
+           <div className={`absolute inset-0 bg-indigo-500/20 rounded-full blur-[40px] transition-all duration-500 ${status !== 'idle' ? 'scale-150' : 'scale-0'}`}></div>
+           
+           <div className={`w-48 h-48 md:w-56 md:h-56 rounded-full bg-slate-900 border-4 border-white/5 shadow-2xl flex flex-col items-center justify-center relative z-10 transition-all duration-500 ${status === 'speaking' ? 'ring-[12px] ring-indigo-500/20 scale-105' : status === 'listening' ? 'ring-[12px] ring-purple-500/20 scale-105' : ''}`}>
+              
+              {status === 'thinking' ? (
+                <Loader2 className="w-16 h-16 text-indigo-500 animate-spin" />
+              ) : (
+                <div className="flex items-center gap-1.5 h-16">
+                  {waveHeights.map((h, i) => (
+                    <div 
+                      key={i} 
+                      className={`w-1.5 rounded-full transition-all duration-150 ${status === 'speaking' ? 'bg-indigo-400' : status === 'listening' ? 'bg-purple-400' : 'bg-slate-700'}`}
+                      style={{ height: `${h}px` }}
+                    />
+                  ))}
+                </div>
+              )}
+              
+              <div className="mt-4 text-center">
+                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">
+                   {status === 'listening' ? 'Listening...' : status === 'speaking' ? 'AI Speaking' : status === 'thinking' ? 'Processing' : 'Ready'}
+                 </p>
+                 <span className="text-xs font-medium text-slate-300">{learningMode === 'conversation' ? 'Conversation Mode' : 'Phonetics Mode'}</span>
+              </div>
+           </div>
+        </div>
+
+        {/* Mode Selector */}
+        <div className="flex bg-white/5 p-1 rounded-2xl backdrop-blur-xl border border-white/5 shadow-inner">
+           <button 
+             onClick={() => setLearningMode('conversation')}
+             className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${learningMode === 'conversation' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+           >
+             <Languages className="w-4 h-4" /> Hội thoại
+           </button>
+           <button 
+             onClick={() => setLearningMode('pronunciation')}
+             className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${learningMode === 'pronunciation' ? 'bg-purple-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
+           >
+             <Repeat className="w-4 h-4" /> Phát âm
+           </button>
+        </div>
+
+        {/* Transcription Preview (Mini) */}
+        <div className="w-full max-w-lg bg-slate-900/40 backdrop-blur-md rounded-3xl border border-white/5 p-4 h-40 overflow-y-auto no-scrollbar shadow-inner text-center">
+           {transcription.length === 0 ? (
+             <div className="h-full flex flex-col items-center justify-center text-slate-500 opacity-50">
+                <MessageSquare className="w-8 h-8 mb-2" />
+                <p className="text-xs italic">Nội dung hội thoại sẽ hiển thị tại đây...</p>
+             </div>
+           ) : (
+             <div className="space-y-3">
+                {transcription.map((t, i) => (
+                  <div key={i} className={`flex flex-col ${t.role === 'user' ? 'items-end' : 'items-start'} animate-fade-in`}>
+                     <span className={`px-4 py-2 rounded-2xl text-sm ${t.role === 'user' ? 'bg-indigo-500/20 text-indigo-100 border border-indigo-500/20' : 'bg-slate-800 text-slate-200'}`}>
+                        {t.text}
+                     </span>
+                  </div>
+                ))}
+                <div ref={transcriptionEndRef} />
+             </div>
+           )}
+        </div>
+      </div>
+
+      {/* Footer Controls */}
+      <div className="w-full bg-slate-950/80 backdrop-blur-2xl px-6 pb-12 pt-6 flex items-center justify-center gap-8 border-t border-white/5 z-20 shrink-0">
+        <button 
+          onClick={() => { stopSession(); onClose(); }}
+          className="w-14 h-14 rounded-full bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center transition-all group active:scale-90"
+          title="Kết thúc"
+        >
+          <PhoneOff className="w-6 h-6 text-red-500 group-hover:scale-110 transition-transform" />
+        </button>
+
+        {!isActive ? (
+          <button 
+            onClick={startSession}
+            disabled={isConnecting}
+            className="h-20 px-12 rounded-full bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-black text-lg shadow-[0_10px_40px_rgb(99,102,241,0.4)] hover:shadow-[0_15px_50px_rgb(99,102,241,0.5)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 flex items-center gap-4"
+          >
+            {isConnecting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Play className="w-6 h-6 fill-current" />}
+            {isConnecting ? 'ĐANG KẾT NỐI' : 'BẮT ĐẦU HỌC'}
+          </button>
+        ) : (
+          <button 
+            onClick={stopSession}
+            className="h-20 px-12 rounded-full bg-white text-slate-900 font-black text-lg shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-4 animate-pulse"
+          >
+            <div className="w-3 h-3 rounded-full bg-indigo-600 animate-ping"></div>
+            ĐANG LẮNG NGHE
+          </button>
+        )}
+
+        <button 
+          className="w-14 h-14 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all active:scale-90"
+          title="Ghi chú"
+        >
+          <Languages className="w-6 h-6 text-slate-400" />
+        </button>
+      </div>
+
+      {error && (
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-pop-in z-50">
+           <Info className="w-5 h-5" />
+           <span className="text-sm font-bold">{error}</span>
+        </div>
+      )}
     </div>
   );
 };
+
+// Internal utility component
+const ArrowLeft = ({ className }: { className?: string }) => (
+  <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+);
 
 export default LiveTutor;

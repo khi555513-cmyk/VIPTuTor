@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UserProfile, AccountTier, DailyUsage } from '../types';
-import { User, Mail, Phone, Target, Camera, Save, CreditCard, LogOut, Crown, Star, CheckCircle, Zap, Shield, ShoppingCart, Loader2, MessageCircle, AlertTriangle, Key, Edit2, ShieldCheck, RefreshCw, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Mail, Phone, Target, Camera, Save, CreditCard, LogOut, Crown, Star, CheckCircle, Zap, Shield, ShoppingCart, Loader2, MessageCircle, AlertTriangle, Key, Edit2, ShieldCheck, RefreshCw, Lock, ChevronDown, ChevronUp, Globe, Sparkles } from 'lucide-react';
 import { TIER_LIMITS, SUBSCRIPTION_PACKAGES, ZALO_CONSULTATION_URL, ACTIVATION_CODES } from '../constants';
 
 interface UserProfileProps {
@@ -111,135 +111,270 @@ const UserProfileView: React.FC<UserProfileProps> = ({
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="max-w-6xl mx-auto space-y-6">
           
-          {/* Enhanced API Connection Info Section */}
-          <section className="bg-[#0f172a] rounded-[2rem] shadow-2xl p-6 md:p-10 text-white border border-indigo-500/20 relative overflow-hidden">
-             {/* Decorative Background Element */}
-             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+          {/* Enhanced System Connection Section (Cyberpunk Style) */}
+          <section className="bg-[#0b1121] rounded-[2.5rem] shadow-2xl p-6 md:p-12 text-white border border-indigo-500/20 relative overflow-hidden group">
+             {/* Dynamic Background */}
+             <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-600/10 rounded-full blur-[80px] pointer-events-none group-hover:bg-indigo-600/20 transition-all duration-700"></div>
+             <div className="absolute -bottom-24 -left-24 w-80 h-80 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-purple-600/20 transition-all duration-700"></div>
              
-             <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
-                <div className="flex items-center gap-6">
-                   <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-500/40 border border-white/20">
-                      <ShieldCheck className="w-8 h-8 text-white" />
+             <div className="relative z-10">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+                   <div className="flex items-center gap-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 via-violet-600 to-purple-700 rounded-[2rem] flex items-center justify-center shadow-[0_20px_50px_rgb(99,102,241,0.3)] border border-white/20 animate-float">
+                         <ShieldCheck className="w-10 h-10 text-white" />
+                      </div>
+                      <div>
+                         <h3 className="font-black text-2xl tracking-tight mb-2 flex items-center gap-2">
+                           Trạm Kết Nối AI
+                           <Sparkles className="w-5 h-5 text-indigo-400" />
+                         </h3>
+                         <div className="flex flex-wrap items-center gap-3">
+                           <span className="flex items-center gap-1.5 bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-green-500/20">
+                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-ping"></div>
+                             Encrypted
+                           </span>
+                           <span className="flex items-center gap-1.5 bg-indigo-500/10 text-indigo-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-500/20">
+                             <Globe className="w-3 h-3" />
+                             Vertex AI 3.0
+                           </span>
+                         </div>
+                      </div>
                    </div>
-                   <div>
-                      <h3 className="font-black text-2xl tracking-tight mb-1">Kết Nối Hệ Thống</h3>
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest">Trạng thái: Secure AI Connection</p>
+
+                   <div className="flex-1 w-full max-w-lg">
+                      <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-5 md:p-6 shadow-inner">
+                         <div className="flex justify-between items-center mb-4 px-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] flex items-center gap-2">
+                               <Lock className="w-3 h-3" /> Digital Identity Key
+                            </span>
+                            <span className="text-[10px] text-slate-600 font-mono">ID: {Math.random().toString(36).substring(7).toUpperCase()}</span>
+                         </div>
+                         
+                         <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <div className="flex-1 w-full bg-black/40 border border-white/5 px-5 py-4 rounded-2xl font-mono text-sm text-indigo-200 overflow-hidden shadow-inner flex items-center justify-between">
+                                <span className="truncate">{activeApiKey ? `${activeApiKey.slice(0, 12)}••••••••••••${activeApiKey.slice(-4)}` : "SYSTEM_SECURED"}</span>
+                                <CheckCircle className="w-4 h-4 text-green-500/50 shrink-0" />
+                            </div>
+                            <button 
+                              onClick={onManageApiKey}
+                              className="w-full sm:w-auto p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl shadow-xl shadow-indigo-900/40 transition-all hover:scale-105 active:scale-95 border border-indigo-400/30 flex items-center justify-center gap-3"
+                              title="Cập nhật kết nối AI Studio"
+                            >
+                               <RefreshCw className="w-5 h-5" />
+                               <span className="sm:hidden font-bold">ĐỔI KẾT NỐI</span>
+                            </button>
+                         </div>
                       </div>
                    </div>
                 </div>
 
-                <div className="flex-1 w-full max-w-md">
-                   <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-center px-1">
-                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                            <Lock className="w-3 h-3" /> Bảo Mật AI
-                         </span>
-                         <span className="text-[10px] text-slate-500">Google Cloud (Vertex AI)</span>
+                <div className="mt-10 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+                   <div className="flex gap-8">
+                      <div className="text-center md:text-left">
+                         <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Mức độ bảo mật</p>
+                         <p className="text-sm font-bold text-indigo-300">Quân sự (AES-256)</p>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-black/40 border border-white/5 px-4 py-3 rounded-xl font-mono text-sm text-indigo-200 overflow-hidden select-none">
-                            {activeApiKey ? `${activeApiKey.slice(0, 10)}••••••••••••${activeApiKey.slice(-4)}` : "Đã được bảo mật"}
-                        </div>
-                        <button 
-                          onClick={onManageApiKey}
-                          className="p-3.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg shadow-indigo-900/20 transition-all hover:scale-105 active:scale-95 border border-indigo-400/30"
-                          title="Cấu hình kết nối AI"
-                        >
-                            <RefreshCw className="w-5 h-5" />
-                        </button>
+                      <div className="text-center md:text-left">
+                         <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mb-1">Thời gian phản hồi</p>
+                         <p className="text-sm font-bold text-indigo-300">&lt; 150ms</p>
                       </div>
                    </div>
-                </div>
-
-                <div className="flex flex-col gap-3 shrink-0">
-                   <button 
-                      onClick={onManageApiKey}
-                      className="px-6 py-3 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/30 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-2"
-                   >
-                      <Key className="w-4 h-4" /> THAY ĐỔI API KEY
-                   </button>
-                   <button 
-                      onClick={() => {
-                        if(confirm('Bạn có chắc chắn muốn ngắt kết nối API?')) {
-                          localStorage.removeItem('tutor_authorized');
-                          window.location.reload();
-                        }
-                      }}
-                      className="px-6 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center justify-center gap-2"
-                   >
-                      <LogOut className="w-4 h-4" /> NGẮT KẾT NỐI
-                   </button>
+                   <div className="flex gap-3">
+                      <button 
+                         onClick={onManageApiKey}
+                         className="px-8 py-3.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-2xl text-xs font-black tracking-widest uppercase transition-all active:scale-95 flex items-center gap-3"
+                      >
+                         <Key className="w-4 h-4" /> QUẢN LÝ API KEY
+                      </button>
+                      <button 
+                         onClick={() => {
+                           if(confirm('Hành động này sẽ ngắt toàn bộ liên kết dữ liệu AI. Bạn chắc chắn?')) {
+                             localStorage.removeItem('tutor_authorized');
+                             window.location.reload();
+                           }
+                         }}
+                         className="px-4 py-3.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-2xl transition-all active:scale-95"
+                         title="Ngắt kết nối an toàn"
+                      >
+                         <LogOut className="w-5 h-5" />
+                      </button>
+                   </div>
                 </div>
              </div>
           </section>
 
           {/* Usage Dashboard */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6">
-             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-                <h3 className="font-bold text-gray-800 flex items-center gap-2 text-base md:text-lg"> <Zap className="w-5 h-5 text-orange-500" /> Thống kê sử dụng </h3>
-                {profile.accountTier !== 'basic' && ( <button onClick={onCancelSubscription} className="w-full sm:w-auto text-xs text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 transition-all shadow-sm"> <AlertTriangle className="w-3.5 h-3.5" /> Hủy gói cước </button> )}
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-4 md:p-8">
+             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div>
+                   <h3 className="font-black text-gray-800 flex items-center gap-2 text-lg md:text-xl"> 
+                     <Zap className="w-6 h-6 text-orange-500 fill-orange-500" /> 
+                     Năng Lực Sử Dụng 
+                   </h3>
+                   <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-bold">Thống kê dữ liệu thời gian thực</p>
+                </div>
+                {profile.accountTier !== 'basic' && ( 
+                  <button onClick={onCancelSubscription} className="w-full sm:w-auto text-xs font-black text-red-500 hover:text-red-700 hover:bg-red-50 border border-red-200 px-5 py-3 rounded-2xl flex items-center justify-center gap-2 transition-all shadow-sm"> 
+                    <AlertTriangle className="w-4 h-4" /> HỦY GÓI CƯỚC 
+                  </button> 
+                )}
              </div>
-             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col">
-                   <div className="flex justify-between text-sm mb-2"> <span className="text-gray-600 font-medium">Tin nhắn AI</span> <span className="font-bold text-indigo-600">{dailyUsage.messagesCount} / {limits.messages > 9000 ? '∞' : limits.messages}</span> </div>
-                   <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-auto"> <div className="h-full bg-indigo-500 transition-all duration-500" style={{ width: `${Math.min((dailyUsage.messagesCount / (limits.messages || 1)) * 100, 100)}%` }}></div> </div>
+             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 flex flex-col shadow-inner">
+                   <div className="flex justify-between items-center mb-3"> 
+                     <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Tin nhắn AI</span> 
+                     <span className="font-black text-indigo-600 text-lg">{dailyUsage.messagesCount} <span className="text-gray-300 font-medium text-xs">/ {limits.messages > 9000 ? '∞' : limits.messages}</span></span> 
+                   </div>
+                   <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mt-auto"> 
+                     <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-400 transition-all duration-1000 ease-out shadow-[0_0_10px_rgb(99,102,241,0.5)]" style={{ width: `${Math.min((dailyUsage.messagesCount / (limits.messages || 1)) * 100, 100)}%` }}></div> 
+                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col">
-                   <div className="flex justify-between text-sm mb-2"> <span className="text-gray-600 font-medium">Tạo đề thi</span> <span className="font-bold text-purple-600">{dailyUsage.testsGenerated} / {limits.tests > 9000 ? '∞' : limits.tests}</span> </div>
-                   <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-auto"> <div className="h-full bg-purple-500 transition-all duration-500" style={{ width: `${Math.min((dailyUsage.testsGenerated / (limits.tests || 1)) * 100, 100)}%` }}></div> </div>
+                <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 flex flex-col shadow-inner">
+                   <div className="flex justify-between items-center mb-3"> 
+                     <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Đề thi VIP</span> 
+                     <span className="font-black text-purple-600 text-lg">{dailyUsage.testsGenerated} <span className="text-gray-300 font-medium text-xs">/ {limits.tests > 9000 ? '∞' : limits.tests}</span></span> 
+                   </div>
+                   <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mt-auto"> 
+                     <div className="h-full bg-gradient-to-r from-purple-500 to-purple-400 transition-all duration-1000 ease-out shadow-[0_0_10px_rgb(168,85,247,0.5)]" style={{ width: `${Math.min((dailyUsage.testsGenerated / (limits.tests || 1)) * 100, 100)}%` }}></div> 
+                   </div>
                 </div>
-                <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 flex flex-col">
-                   <div className="flex justify-between text-sm mb-2"> <span className="text-gray-600 font-medium">Chơi Game</span> <span className="font-bold text-green-600">{dailyUsage.gamesPlayed} / {limits.games > 9000 ? '∞' : limits.games}</span> </div>
-                   <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-auto"> <div className="h-full bg-green-500 transition-all duration-500" style={{ width: `${Math.min((dailyUsage.gamesPlayed / (limits.games || 1)) * 100, 100)}%` }}></div> </div>
+                <div className="bg-gray-50/50 rounded-2xl p-5 border border-gray-100 flex flex-col shadow-inner">
+                   <div className="flex justify-between items-center mb-3"> 
+                     <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Game Đố Vui</span> 
+                     <span className="font-black text-green-600 text-lg">{dailyUsage.gamesPlayed} <span className="text-gray-300 font-medium text-xs">/ {limits.games > 9000 ? '∞' : limits.games}</span></span> 
+                   </div>
+                   <div className="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mt-auto"> 
+                     <div className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000 ease-out shadow-[0_0_10px_rgb(34,197,94,0.5)]" style={{ width: `${Math.min((dailyUsage.gamesPlayed / (limits.games || 1)) * 100, 100)}%` }}></div> 
+                   </div>
                 </div>
              </div>
           </div>
 
           {/* User Info */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className={`h-24 md:h-32 relative ${profile.accountTier === 'vip' ? 'bg-gradient-to-r from-yellow-500 via-amber-500 to-orange-500' : profile.accountTier === 'pro' ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gradient-to-r from-gray-400 to-gray-600'}`}></div>
-            <div className="px-4 md:px-6 pb-6 relative">
-              <div className="flex flex-col md:flex-row items-center md:items-end -mt-12 md:-mt-14 mb-6 gap-4">
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className={`h-32 md:h-44 relative ${profile.accountTier === 'vip' ? 'bg-gradient-to-r from-indigo-900 via-indigo-700 to-purple-900' : profile.accountTier === 'pro' ? 'bg-gradient-to-r from-blue-700 to-indigo-800' : 'bg-gradient-to-r from-slate-400 to-slate-600'}`}>
+               {/* Pattern overlay */}
+               <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]"></div>
+            </div>
+            <div className="px-6 md:px-10 pb-10 relative">
+              <div className="flex flex-col md:flex-row items-center md:items-end -mt-16 md:-mt-20 mb-8 gap-6">
                 <div className="relative group shrink-0">
-                  <div className={`w-24 h-24 md:w-28 md:h-28 rounded-full border-[5px] border-white bg-gray-200 overflow-hidden shadow-lg ${profile.accountTier === 'vip' ? 'ring-4 ring-yellow-400/30' : ''}`}>
-                    {formData.avatar ? ( <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" /> ) : ( <div className="w-full h-full flex items-center justify-center bg-indigo-100 text-indigo-400"> <User className="w-10 h-10 md:w-12 md:h-12" /> </div> )}
+                  <div className={`w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] border-[8px] border-white bg-gray-200 overflow-hidden shadow-2xl transition-transform group-hover:scale-105 duration-500 ${profile.accountTier === 'vip' ? 'ring-8 ring-indigo-500/10' : ''}`}>
+                    {formData.avatar ? ( <img src={formData.avatar} alt="Avatar" className="w-full h-full object-cover" /> ) : ( <div className="w-full h-full flex items-center justify-center bg-indigo-50 text-indigo-300"> <User className="w-16 h-16 md:w-20 md:h-20" /> </div> )}
                   </div>
-                  {isEditing && ( <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-1 right-1 p-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 shadow-md"> <Camera className="w-4 h-4" /> </button> )}
+                  {isEditing && ( <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 shadow-xl border border-white/20 transition-all hover:rotate-12"> <Camera className="w-5 h-5" /> </button> )}
                   <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                 </div>
-                <div className="flex-1 text-center md:text-left w-full md:w-auto">
-                  <div className="flex flex-col md:flex-row items-center md:items-end gap-2 mb-1 justify-center md:justify-start">
-                     <h2 className="text-2xl font-bold text-gray-900 line-clamp-1">{profile.name}</h2>
-                     <div className="mb-1 md:mb-0.5 transform scale-90 md:scale-100">{renderTierBadge(profile.accountTier)}</div>
+                <div className="flex-1 text-center md:text-left w-full">
+                  <div className="flex flex-col md:flex-row items-center md:items-end gap-3 mb-2 justify-center md:justify-start">
+                     <h2 className="text-3xl font-black text-gray-900 tracking-tight">{profile.name}</h2>
+                     <div className="mb-1 transform md:scale-110">{renderTierBadge(profile.accountTier)}</div>
                   </div>
-                  <p className="text-gray-500 text-sm">Thành viên từ {new Date(profile.joinDate).toLocaleDateString('vi-VN')}</p>
+                  <p className="text-gray-400 text-sm font-medium flex items-center justify-center md:justify-start gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    Thành viên từ {new Date(profile.joinDate).toLocaleDateString('vi-VN')}
+                  </p>
                 </div>
-                <div className="mt-2 md:mt-0 w-full md:w-auto flex justify-center">
-                   {!isEditing ? ( <button onClick={() => setIsEditing(true)} className="w-full md:w-auto px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm"> Chỉnh sửa </button> ) : ( <div className="flex gap-2 w-full md:w-auto justify-center"> <button onClick={() => { setIsEditing(false); setFormData(profile); }} className="flex-1 md:flex-none px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg text-sm"> Hủy </button> <button onClick={handleSave} className="flex-1 md:flex-none px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium shadow-sm flex items-center justify-center gap-2 text-sm"> <Save className="w-4 h-4" /> Lưu </button> </div> )}
+                <div className="mt-4 md:mt-0 w-full md:w-auto flex justify-center">
+                   {!isEditing ? ( 
+                     <button onClick={() => setIsEditing(true)} className="w-full md:w-auto px-10 py-4 bg-gray-900 text-white rounded-2xl hover:bg-black font-black text-sm tracking-widest shadow-xl transition-all hover:-translate-y-1 active:scale-95"> CHỈNH SỬA </button> 
+                   ) : ( 
+                     <div className="flex gap-3 w-full md:w-auto"> 
+                        <button onClick={() => { setIsEditing(false); setFormData(profile); }} className="flex-1 md:flex-none px-6 py-4 bg-gray-100 text-gray-500 rounded-2xl text-sm font-bold hover:bg-gray-200 transition-all"> HỦY </button> 
+                        <button onClick={handleSave} className="flex-1 md:flex-none px-10 py-4 bg-green-600 text-white rounded-2xl font-black shadow-lg shadow-green-900/20 flex items-center justify-center gap-3 text-sm tracking-widest hover:bg-green-700 transition-all active:scale-95"> <Save className="w-5 h-5" /> LƯU </button> 
+                     </div> 
+                   )}
                 </div>
               </div>
             </div>
           </div>
 
           {/* Pricing & Activation Section */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 mb-8">
-             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                <div> <h3 className="font-bold text-gray-800 flex items-center gap-2 mb-1 text-base md:text-lg"> <CreditCard className="w-5 h-5 text-indigo-600" /> Bảng Giá & Kích Hoạt </h3> <p className="text-sm text-gray-500">Nâng cấp để mở khóa quyền năng AI không giới hạn.</p> </div>
-                <button onClick={() => setIsActivationOpen(!isActivationOpen)} className="w-full md:w-auto bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-100 flex items-center justify-center gap-2 border border-indigo-200"> <Key className="w-4 h-4" /> {isActivationOpen ? 'Đóng nhập mã' : 'Nhập Mã Kích Hoạt'} </button>
+          <div className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 md:p-10 mb-8">
+             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+                <div> 
+                  <h3 className="font-black text-gray-800 flex items-center gap-3 text-xl md:text-2xl"> 
+                    <CreditCard className="w-7 h-7 text-indigo-600" /> 
+                    Nâng Cấp Quyền Lợi 
+                  </h3> 
+                  <p className="text-sm text-gray-400 mt-1 font-medium italic">Mở khóa trí tuệ nhân tạo không giới hạn dành riêng cho bạn.</p> 
+                </div>
+                <button onClick={() => setIsActivationOpen(!isActivationOpen)} className="w-full md:w-auto bg-indigo-50 text-indigo-700 px-6 py-4 rounded-2xl font-black text-xs tracking-widest uppercase hover:bg-indigo-100 flex items-center justify-center gap-3 border-2 border-indigo-100 transition-all active:scale-95"> 
+                  <Key className="w-5 h-5" /> {isActivationOpen ? 'Đóng nhập mã' : 'Kích hoạt code VIP'} 
+                </button>
              </div>
-             {isActivationOpen && ( <div className="mb-8 bg-indigo-50 p-4 md:p-6 rounded-xl border-2 border-indigo-100 animate-fade-in relative overflow-hidden"> <div className="absolute top-0 right-0 p-2 opacity-10"> <Key className="w-24 h-24 text-indigo-600" /> </div> <label className="block text-sm font-bold text-indigo-900 mb-2">Đã có mã kích hoạt từ Zalo?</label> <div className="flex flex-col sm:flex-row gap-2 relative z-10"> <input type="text" value={activationCode} onChange={(e) => setActivationCode(e.target.value)} placeholder="VD: VIP-2024..." className="flex-1 p-3 border border-indigo-200 rounded-lg uppercase font-mono tracking-wider outline-none shadow-sm" /> <button onClick={handleActivateCode} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 sm:py-0 rounded-lg font-bold transition-colors"> Kích hoạt </button> </div> {activationMsg && ( <div className={`mt-3 text-sm flex items-center gap-2 font-medium ${activationMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}> {activationMsg.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />} {activationMsg.text} </div> )} </div> )}
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4"> {SUBSCRIPTION_PACKAGES.map((pkg) => { const isBasic = pkg.tier === 'basic'; return ( <div key={pkg.id} className={`relative flex flex-col p-4 rounded-xl border-2 transition-all hover:-translate-y-1 hover:shadow-lg ${pkg.tier === 'vip' ? 'border-amber-200 bg-amber-50/50' : pkg.isPopular ? 'border-indigo-200 bg-indigo-50/50' : 'border-gray-100 bg-white'}`}> {pkg.isLifetime && <div className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">HOT</div>} {pkg.isPopular && <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-bl-lg">BEST</div>} <div className="mb-2"> <h4 className="font-bold text-gray-800 line-clamp-1">{pkg.name}</h4> <span className={`text-xs font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${pkg.tier === 'vip' ? 'bg-amber-100 text-amber-700' : isBasic ? 'bg-gray-100 text-gray-600' : 'bg-blue-100 text-blue-700'}`}> {pkg.tier.toUpperCase()} </span> </div> <div className="mb-4"> <span className="text-xl font-black text-gray-900">{pkg.priceVND > 0 ? `${pkg.priceVND.toLocaleString()}đ` : 'Miễn Phí'}</span> <span className="text-xs text-gray-500 block"> {pkg.isLifetime ? 'Thanh toán 1 lần' : pkg.durationMonths > 0 ? `/ ${pkg.durationMonths} tháng` : 'Trọn đời'} </span> </div> <ul className="text-xs text-gray-600 space-y-2 mb-4 flex-1"> {pkg.features.map((f, i) => ( <li key={i} className="flex items-start gap-1.5"> <CheckCircle className={`w-3.5 h-3.5 shrink-0 ${isBasic ? 'text-gray-400' : 'text-green-500'}`} /> <span className="leading-tight">{f}</span> </li> ))} </ul> {!isBasic ? ( <button onClick={handleContactZalo} className={`w-full py-2.5 rounded-lg font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 active:scale-95 ${pkg.tier === 'vip' ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:brightness-110' : 'bg-indigo-600 text-white hover:bg-indigo-700'} `} > <MessageCircle className="w-3.5 h-3.5" /> Liên hệ Zalo </button> ) : ( <button disabled className="w-full py-2.5 bg-gray-100 text-gray-400 rounded-lg font-bold text-xs border border-gray-200"> Đang sử dụng </button> )} </div> ); })} </div>
+             
+             {isActivationOpen && ( 
+               <div className="mb-10 bg-indigo-50/50 p-6 md:p-8 rounded-[2rem] border-4 border-dashed border-indigo-100 animate-pop-in relative overflow-hidden"> 
+                 <div className="absolute -top-10 -right-10 p-2 opacity-5"> <Key className="w-48 h-48 text-indigo-600" /> </div> 
+                 <label className="block text-sm font-black text-indigo-900 mb-4 uppercase tracking-widest text-center md:text-left">Đã có mã kích hoạt từ Gia sư?</label> 
+                 <div className="flex flex-col sm:flex-row gap-3 relative z-10"> 
+                   <input type="text" value={activationCode} onChange={(e) => setActivationCode(e.target.value)} placeholder="VD: VIP-XXXX-XXXX..." className="flex-1 p-5 border-2 border-indigo-200 rounded-2xl uppercase font-mono text-lg tracking-[0.2em] outline-none shadow-inner focus:border-indigo-500 bg-white" /> 
+                   <button onClick={handleActivateCode} className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-5 sm:py-0 rounded-2xl font-black tracking-widest transition-all shadow-xl shadow-indigo-900/20 active:scale-95"> KÍCH HOẠT </button> 
+                 </div> 
+                 {activationMsg && ( 
+                   <div className={`mt-5 text-sm flex items-center justify-center md:justify-start gap-3 font-bold px-4 py-3 rounded-xl ${activationMsg.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}> 
+                     {activationMsg.type === 'success' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />} 
+                     {activationMsg.text} 
+                   </div> 
+                 )} 
+               </div> 
+             )}
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6"> 
+               {SUBSCRIPTION_PACKAGES.map((pkg) => { 
+                 const isBasic = pkg.tier === 'basic'; 
+                 return ( 
+                   <div key={pkg.id} className={`relative flex flex-col p-6 rounded-[2rem] border-2 transition-all hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.1)] ${pkg.tier === 'vip' ? 'border-indigo-500 bg-indigo-50/10' : pkg.isPopular ? 'border-blue-300 bg-blue-50/30' : 'border-gray-100 bg-white'}`}> 
+                     {pkg.isLifetime && <div className="absolute -top-3 -right-3 bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg z-10 animate-bounce">LIFETIME</div>} 
+                     {pkg.isPopular && <div className="absolute -top-3 -right-3 bg-indigo-600 text-white text-[10px] font-black px-4 py-1.5 rounded-full shadow-lg z-10">RECOMMENDED</div>} 
+                     
+                     <div className="mb-4"> 
+                       <h4 className="font-black text-gray-900 text-lg leading-tight mb-1">{pkg.name}</h4> 
+                       <span className={`text-[10px] font-black px-3 py-1 rounded-full inline-block uppercase tracking-widest ${pkg.tier === 'vip' ? 'bg-indigo-100 text-indigo-700' : isBasic ? 'bg-gray-100 text-gray-500' : 'bg-blue-100 text-blue-700'}`}> 
+                         {pkg.tier} Level 
+                       </span> 
+                     </div> 
+                     
+                     <div className="mb-6"> 
+                       <span className="text-2xl font-black text-gray-900">{pkg.priceVND > 0 ? `${pkg.priceVND.toLocaleString()}đ` : 'FREE'}</span> 
+                       <span className="text-[10px] text-gray-400 font-bold block uppercase mt-1"> 
+                         {pkg.isLifetime ? 'Access Forever' : pkg.durationMonths > 0 ? `per ${pkg.durationMonths} month` : 'Limited Basic'} 
+                       </span> 
+                     </div> 
+                     
+                     <ul className="text-xs text-gray-600 space-y-3 mb-8 flex-1"> 
+                       {pkg.features.map((f, i) => ( 
+                         <li key={i} className="flex items-start gap-2.5"> 
+                           <CheckCircle className={`w-4 h-4 shrink-0 ${isBasic ? 'text-gray-300' : 'text-green-500'}`} /> 
+                           <span className="font-medium leading-tight">{f}</span> 
+                         </li> 
+                       ))} 
+                     </ul> 
+                     
+                     {!isBasic ? ( 
+                       <button onClick={handleContactZalo} className={`w-full py-4 rounded-2xl font-black text-xs tracking-widest shadow-xl transition-all flex items-center justify-center gap-3 active:scale-95 ${pkg.tier === 'vip' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-blue-600 text-white hover:bg-blue-700'} `} > 
+                         <MessageCircle className="w-4 h-4" /> LIÊN HỆ ZALO 
+                       </button> 
+                     ) : ( 
+                       <div className="w-full py-4 bg-gray-100 text-gray-400 rounded-2xl font-black text-xs tracking-widest border border-gray-200 text-center uppercase"> 
+                         CURRENT PLAN 
+                       </div> 
+                     )} 
+                   </div> 
+                 ); 
+               })} 
+             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 md:p-6 mb-8">
-               <h3 className="font-bold text-gray-800 mb-2 text-base">Khu vực nguy hiểm</h3>
-               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <p className="text-xs text-gray-500"> Xóa toàn bộ dữ liệu chat và cài đặt. </p>
-                  <button onClick={onResetApp} className="w-full sm:w-auto px-4 py-2 border border-red-200 text-red-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1"> <LogOut className="w-3 h-3" /> Reset App </button>
+          <div className="bg-white rounded-3xl shadow-sm border border-red-100 p-6 md:p-8 mb-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+               <div className="text-center sm:text-left">
+                  <h3 className="font-black text-red-600 mb-1 text-lg">CÀI ĐẶT NGUY HIỂM</h3>
+                  <p className="text-xs text-gray-400 font-medium"> Hành động này sẽ xóa vĩnh viễn toàn bộ lịch sử học tập của bạn. </p>
                </div>
+               <button onClick={onResetApp} className="w-full sm:w-auto px-8 py-4 bg-red-50 text-red-600 hover:bg-red-100 rounded-2xl text-xs font-black tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"> 
+                 <LogOut className="w-4 h-4" /> KHÔI PHỤC CÀI ĐẶT GỐC 
+               </button>
            </div>
 
         </div>

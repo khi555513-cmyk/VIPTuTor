@@ -124,7 +124,7 @@ export interface UserProfile {
   joinDate: number;
   accountTier: AccountTier;
   subscriptionExpiry?: number | null; 
-  usedCodes?: string[]; 
+  usedCodes: string[]; // Lưu trữ danh sách mã đã sử dụng
 }
 
 // Usage Stats
@@ -135,7 +135,6 @@ export interface DailyUsage {
   gamesPlayed: number;
 }
 
-// Added missing ClientConnectionInfo for synchronization features in AdminConnect
 export interface ClientConnectionInfo {
   clientId: string;
   channelName: string;

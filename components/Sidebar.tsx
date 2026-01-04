@@ -87,7 +87,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className={`h-14 md:h-16 flex items-center ${isCollapsed ? 'justify-center' : 'px-4 justify-between'} border-b border-slate-800 flex-shrink-0`}>
         {!isCollapsed ? (
           <div className="flex flex-col">
-            <span className="font-bold text-xl text-white tracking-tight">VIP<span className="text-indigo-500">Tutor</span></span>
+            <span className="font-bold text-xl text-white tracking-tight">English<span className="text-indigo-500">Tutor</span></span>
             <span className="text-[10px] text-slate-500 font-medium mt-0.5">© Harriss</span>
           </div>
         ) : (

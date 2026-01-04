@@ -99,7 +99,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const limitMsg: Message = {
         id: Date.now().toString(),
         role: Role.MODEL,
-        text: `🔒 **TÍNH NĂNG ĐÃ BỊ KHÓA**\n\nBạn đã sử dụng hết lưu lượng miễn phí trong ngày. Tính năng chat đã bị khóa ngay lập tức.\n\nĐể tiếp tục sử dụng, vui lòng:\n\n1. Vào mục **Cài đặt (Profile)**\n2. Chọn gói **PRO/VIP**\n3. Liên hệ Zalo để nhận mã kích hoạt ngay lập tức.\n\n👉 *Không gián đoạn học tập - Nâng cấp ngay!*`,
+        text: `🔒 **TÍNH NĂNG ĐÃ BỊ KHÓA**\n\nBạn đã sử dụng hết lưu lượng miễn phí trong ngày. Tính năng chat đã bị khóa ngay lập tức.\n\nĐể tiếp tục sử dụng, vui lòng:\n\n1. Vào mục **Cài đặt (Profile)**\n2. Chọn gói **PRO**\n3. Liên hệ Zalo để nhận mã kích hoạt ngay lập tức.\n\n👉 *Không gián đoạn học tập - Nâng cấp ngay!*`,
         timestamp: Date.now(),
         modeUsed: modeToUse
       };
@@ -287,7 +287,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <GraduationCap className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="font-bold text-gray-800 text-lg tracking-tight">VIP Tutor</h1>
+            <h1 className="font-bold text-gray-800 text-lg tracking-tight">Tutor</h1>
             <p className="text-[11px] text-gray-500 font-medium flex items-center gap-1">
                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Online • AI Expert
             </p>
@@ -308,7 +308,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </button>
           <div className="relative">
              <button onClick={() => setShowMobileModes(!showMobileModes)} className="flex items-center gap-1 font-bold text-gray-800 text-lg active:opacity-70 transition-opacity">
-               VIP<span className="text-indigo-600">Tutor</span> <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileModes ? 'rotate-180' : ''}`} />
+               English<span className="text-indigo-600">Tutor</span> <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileModes ? 'rotate-180' : ''}`} />
              </button>
              {showMobileModes && (
                <div className="absolute top-full left-0 mt-3 w-60 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 animate-pop-in z-50 origin-top-left">
@@ -356,7 +356,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <div className="inline-flex items-center justify-center p-4 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl mb-6 shadow-xl shadow-indigo-200 animate-float">
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-3 tracking-tight">Welcome to VIP Tutor</h2>
+                <h2 className="text-2xl font-bold text-gray-800 mb-3 tracking-tight">Welcome to English Tutor</h2>
                 <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">Hệ thống gia sư AI cao cấp. Sẵn sàng giải bài tập, tạo đề thi và luyện tập tiếng Anh chuyên sâu.</p>
              </div>
              <div className="hidden md:grid grid-cols-2 gap-4 w-full max-w-3xl px-4 pb-4">

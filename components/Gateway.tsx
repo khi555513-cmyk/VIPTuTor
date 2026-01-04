@@ -22,7 +22,7 @@ const Gateway: React.FC<GatewayProps> = ({ onAuthorize }) => {
              <GraduationCap className="w-12 h-12 text-white" />
           </div>
           <h1 className="text-4xl font-black text-white tracking-tight mb-2">
-            VIP<span className="text-indigo-500">Tutor</span> <span className="text-sm font-bold bg-white/10 px-2 py-0.5 rounded ml-1 text-indigo-300">PRO</span>
+            English<span className="text-indigo-500">Tutor</span> <span className="text-sm font-bold bg-white/10 px-2 py-0.5 rounded ml-1 text-indigo-300">PRO</span>
           </h1>
           <p className="text-slate-400 text-sm">Hệ thống gia sư AI thông minh & bảo mật nhất</p>
         </div>
@@ -49,7 +49,7 @@ const Gateway: React.FC<GatewayProps> = ({ onAuthorize }) => {
            </div>
            
            <p className="text-slate-400 text-xs leading-relaxed px-4">
-             Để sử dụng dịch vụ VIP, bạn cần kết nối API Key từ dự án GCP của mình. Hệ thống sẽ ghi nhớ Key cho lần sử dụng sau.
+             Để sử dụng dịch vụ Premium, bạn cần kết nối API Key từ dự án GCP của mình. Hệ thống sẽ ghi nhớ lựa chọn cho lần sử dụng sau.
            </p>
 
            <button 

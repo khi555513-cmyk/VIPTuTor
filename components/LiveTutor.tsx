@@ -33,7 +33,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
 
   const startSession = async () => {
     if (!checkLimit()) {
-      setError("Bạn đã hết lượt sử dụng trong ngày. Vui lòng nâng cấp gói VIP.");
+      setError("Bạn đã hết lượt sử dụng trong ngày. Vui lòng nâng cấp gói Pro.");
       return;
     }
 
@@ -146,7 +146,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
           },
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction: `You are a VIP English Tutor. Your goal is to help the student learn through conversational practice. Correct their mistakes gently, introduce new vocabulary, and keep the conversation engaging. The student's target is ${userProfile.target || 'General Fluency'}. Respond naturally as a human tutor would.`
+          systemInstruction: `You are a professional English Tutor. Your goal is to help the student learn through conversational practice. Correct their mistakes gently, introduce new vocabulary, and keep the conversation engaging. The student's target is ${userProfile.target || 'General Fluency'}. Respond naturally as a human tutor would.`
         }
       });
 
@@ -252,7 +252,7 @@ const LiveTutor: React.FC<LiveTutorProps> = ({ onClose, userProfile, checkLimit,
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-indigo-500/20 px-4 py-1.5 rounded-full border border-indigo-500/30 mb-4 animate-pop-in">
              <Sparkles className="w-4 h-4 text-indigo-400" />
-             <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">VIP Voice Room</span>
+             <span className="text-xs font-bold uppercase tracking-widest text-indigo-300">Voice Room</span>
           </div>
           <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Gia sư AI Trực tuyến</h2>
           <p className="text-slate-400 text-sm">Học tập qua giao tiếp thời gian thực không độ trễ</p>

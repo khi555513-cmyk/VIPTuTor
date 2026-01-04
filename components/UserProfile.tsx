@@ -93,7 +93,7 @@ const UserProfileView: React.FC<UserProfileProps> = ({
 
   const renderTierBadge = (tier: AccountTier) => {
     switch (tier) {
-      case 'vip': return ( <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md animate-shimmer whitespace-nowrap"> <Crown className="w-3 h-3 fill-white" /> VIP MEMBER </div> );
+      case 'vip': return ( <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-amber-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md animate-shimmer whitespace-nowrap"> <Crown className="w-3 h-3 fill-white" /> PREMIUM MEMBER </div> );
       case 'pro': return ( <div className="flex items-center gap-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm whitespace-nowrap"> <Star className="w-3 h-3 fill-white" /> PRO STUDENT </div> );
       default: return ( <div className="flex items-center gap-1 bg-gray-200 text-gray-600 px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap"> BASIC PLAN </div> );
     }

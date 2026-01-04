@@ -22,6 +22,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // Check for persistent authorization
+      const persistedAuth = localStorage.getItem('tutor_authorized') === 'true';
+      if (persistedAuth) {
+        setIsAuthorized(true);
+        return;
+      }
+
       if (window.aistudio) {
         const hasKey = await window.aistudio.hasSelectedApiKey();
         setIsAuthorized(hasKey);
@@ -35,13 +42,15 @@ const App: React.FC = () => {
   const handleAuthorize = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
+      // Persist the authorization state
+      localStorage.setItem('tutor_authorized', 'true');
       setIsAuthorized(true);
     }
   };
 
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
-      const saved = localStorage.getItem('vip_tutor_sessions');
+      const saved = localStorage.getItem('tutor_sessions');
       const parsed = saved ? JSON.parse(saved) : null;
       if (parsed && Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
@@ -54,7 +63,7 @@ const App: React.FC = () => {
 
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
     try {
-      const savedSessions = localStorage.getItem('vip_tutor_sessions');
+      const savedSessions = localStorage.getItem('tutor_sessions');
       if (savedSessions) {
         const parsed = JSON.parse(savedSessions);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -69,7 +78,7 @@ const App: React.FC = () => {
 
   const [savedItems, setSavedItems] = useState<SavedKnowledgeItem[]>(() => {
     try {
-      const saved = localStorage.getItem('vip_tutor_saved');
+      const saved = localStorage.getItem('tutor_saved');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -78,7 +87,7 @@ const App: React.FC = () => {
 
   const [notifications, setNotifications] = useState<AppNotification[]>(() => {
     try {
-      const saved = localStorage.getItem('vip_tutor_notifications');
+      const saved = localStorage.getItem('tutor_notifications');
       if (saved) return JSON.parse(saved);
       return [];
     } catch (e) {
@@ -88,7 +97,7 @@ const App: React.FC = () => {
 
   const [userProfile, setUserProfile] = useState<UserProfile>(() => {
     try {
-      const saved = localStorage.getItem('vip_tutor_profile');
+      const saved = localStorage.getItem('tutor_profile');
       const defaultProfile: UserProfile = { 
         name: 'Bạn Học Viên', 
         joinDate: Date.now(), 
@@ -105,7 +114,7 @@ const App: React.FC = () => {
 
   const [dailyUsage, setDailyUsage] = useState<DailyUsage>(() => {
     try {
-      const saved = localStorage.getItem('vip_tutor_usage');
+      const saved = localStorage.getItem('tutor_usage');
       const today = new Date().toISOString().split('T')[0];
       if (saved) {
         const parsed: DailyUsage = JSON.parse(saved);
@@ -130,23 +139,23 @@ const App: React.FC = () => {
   const [limitModalMessage, setLimitModalMessage] = useState('');
 
   useEffect(() => {
-    if (!isResettingRef.current) localStorage.setItem('vip_tutor_sessions', JSON.stringify(sessions));
+    if (!isResettingRef.current) localStorage.setItem('tutor_sessions', JSON.stringify(sessions));
   }, [sessions]);
 
   useEffect(() => {
-    if (!isResettingRef.current) localStorage.setItem('vip_tutor_saved', JSON.stringify(savedItems));
+    if (!isResettingRef.current) localStorage.setItem('tutor_saved', JSON.stringify(savedItems));
   }, [savedItems]);
 
   useEffect(() => {
-    if (!isResettingRef.current) localStorage.setItem('vip_tutor_notifications', JSON.stringify(notifications));
+    if (!isResettingRef.current) localStorage.setItem('tutor_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
   useEffect(() => {
-    if (!isResettingRef.current) localStorage.setItem('vip_tutor_profile', JSON.stringify(userProfile));
+    if (!isResettingRef.current) localStorage.setItem('tutor_profile', JSON.stringify(userProfile));
   }, [userProfile]);
 
   useEffect(() => {
-    if (!isResettingRef.current) localStorage.setItem('vip_tutor_usage', JSON.stringify(dailyUsage));
+    if (!isResettingRef.current) localStorage.setItem('tutor_usage', JSON.stringify(dailyUsage));
   }, [dailyUsage]);
 
   const handleAddNotification = (note: AppNotification) => {
@@ -224,6 +233,7 @@ const App: React.FC = () => {
 
   const handleApiError = () => {
     setIsAuthorized(false);
+    localStorage.removeItem('tutor_authorized');
   };
 
   const renderContent = () => {
@@ -264,7 +274,7 @@ const App: React.FC = () => {
       <main className="flex-1 flex flex-col h-full w-full min-w-0" role="main">
         {currentView !== 'chat' && (
           <header className="md:hidden h-14 bg-white border-b flex items-center px-4 justify-between flex-shrink-0">
-             <span className="font-bold text-gray-800">VIP Tutor</span>
+             <span className="font-bold text-gray-800">English Tutor</span>
              <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 text-gray-600" aria-label="Open Menu">
                <Menu className="w-6 h-6" />
              </button>

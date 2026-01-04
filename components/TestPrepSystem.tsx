@@ -157,7 +157,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
         <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-4 md:p-8 animate-fade-in my-auto">
           <div className="flex items-center gap-4 mb-6 md:mb-8 border-b pb-4 md:pb-6">
             <div className="bg-indigo-600 p-3 md:p-4 rounded-xl text-white shadow-lg shrink-0"> <GraduationCap className="w-6 h-6 md:w-8 md:h-8" /> </div>
-            <div> <h1 className="text-xl md:text-2xl font-bold text-gray-800 leading-tight">Hệ Thống Luyện Thi VIP Pro</h1> <p className="text-gray-500 text-sm md:text-base">Thiết kế đề thi chuẩn 99% - Phân tích chuyên sâu</p> </div>
+            <div> <h1 className="text-xl md:text-2xl font-bold text-gray-800 leading-tight">Hệ Thống Luyện Thi Pro</h1> <p className="text-gray-500 text-sm md:text-base">Thiết kế đề thi chuẩn 99% - Phân tích chuyên sâu</p> </div>
           </div>
           <div className="space-y-4 md:space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">

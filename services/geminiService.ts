@@ -9,10 +9,12 @@ import { getSystemInstruction } from '../constants';
 export const generateTutorResponse = async (
   text: string,
   attachments: Attachment[],
-  mode: TutorMode
+  mode: TutorMode,
+  onApiError?: () => void
 ): Promise<string> => {
   try {
     // Initialize the GoogleGenAI client right before use as per guidelines.
+    // It will automatically pick up the key from process.env.API_KEY.
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
     
     const parts: any[] = [];
@@ -21,17 +23,13 @@ export const generateTutorResponse = async (
     // Add attachments if any
     if (attachments && attachments.length > 0) {
       attachments.forEach(att => {
-        // Safe guard against empty data
         if (!att.data) return;
 
-        // If it's a text attachment (e.g. converted DOCX), append to prompt
         if (att.isText) {
           promptText += `\n\n[Attached Document Content - ${att.name || 'Doc'}]:\n${att.data}\n`;
         } 
-        // If it's a regular supported binary (Image, PDF)
         else {
           try {
-             // Remove data:image/png;base64, prefix if present for clean base64
              const base64Data = att.data.includes(',') ? att.data.split(',')[1] : att.data;
              if (base64Data) {
                 parts.push({
@@ -48,7 +46,6 @@ export const generateTutorResponse = async (
       });
     }
 
-    // Add text prompt
     if (promptText) {
       parts.push({ text: promptText });
     } else if (parts.length === 0) {
@@ -74,8 +71,15 @@ export const generateTutorResponse = async (
     });
 
     return response.text || "Xin lỗi, tôi không thể tạo câu trả lời vào lúc này.";
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
+    
+    // Per instructions: Handle "Requested entity was not found" error
+    if (error?.message?.includes("Requested entity was not found") || error?.status === 404) {
+      if (onApiError) onApiError();
+      return "**LỖI XÁC THỰC:** API Key đã chọn không hợp lệ hoặc đã bị vô hiệu hóa. Vui lòng chọn lại API Key mới.";
+    }
+
     return `**Lỗi kết nối với Gia sư AI:**\n\n${error instanceof Error ? error.message : JSON.stringify(error)}`;
   }
 };

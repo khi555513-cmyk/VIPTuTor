@@ -11,12 +11,44 @@ import UserProfileView from './components/UserProfile';
 import LiveTutor from './components/LiveTutor';
 import SubscriptionExpiredModal from './components/SubscriptionExpiredModal';
 import LimitReachedModal from './components/LimitReachedModal';
+import Gateway from './components/Gateway';
 import { ChatSession, SavedKnowledgeItem, Message, Role, AppNotification, GameData, UserProfile, DailyUsage } from './types';
 import { TIER_LIMITS } from './constants';
-import { Menu } from 'lucide-react';
+// Added Loader2 to the imports
+import { Menu, Loader2 } from 'lucide-react';
+
+declare global {
+  interface Window {
+    // Changed aistudio type to any to resolve conflict with existing global AIStudio type
+    aistudio: any;
+  }
+}
 
 const App: React.FC = () => {
   const isResettingRef = useRef(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  // Check for API Key on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (window.aistudio) {
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        setIsAuthorized(hasKey);
+      } else {
+        // Fallback for environment without aistudio bridge
+        setIsAuthorized(true);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  const handleAuthorize = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      // Per instructions: assume success after triggering the dialog
+      setIsAuthorized(true);
+    }
+  };
 
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     try {
@@ -225,16 +257,26 @@ const App: React.FC = () => {
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
+  const handleApiError = () => {
+    setIsAuthorized(false);
+  };
+
   const renderContent = () => {
     switch (currentView) {
-      case 'test-prep': return <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => checkLimit('test')} incrementUsage={() => incrementUsage('test')} />;
+      case 'test-prep': return <TestPrepSystem onBack={() => setCurrentView('chat')} checkLimit={() => checkLimit('test')} incrementUsage={() => incrementUsage('test')} onApiError={handleApiError} />;
       case 'saved': return <SavedView items={savedItems} onDelete={(id) => setSavedItems(prev => prev.filter(i => i.id !== id))} />;
       case 'notifications': return <NotificationView notifications={notifications} onMarkAllRead={() => setNotifications(prev => prev.map(n => ({...n, isRead: true})))} onDelete={(id) => setNotifications(prev => prev.filter(n => n.id !== id))} onMarkRead={(id) => setNotifications(prev => prev.map(n => n.id === id ? {...n, isRead: true} : n))} />;
-      case 'profile': return <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => setUserProfile(p => ({...p, accountTier: 'basic', subscriptionExpiry: null}))} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} />;
+      case 'profile': return <UserProfileView profile={userProfile} onUpdateProfile={setUserProfile} dailyUsage={dailyUsage} onCancelSubscription={() => setUserProfile(p => ({...p, accountTier: 'basic', subscriptionExpiry: null}))} onResetApp={() => { if(confirm('Reset app?')) { isResettingRef.current = true; localStorage.clear(); window.location.reload(); } }} onManageApiKey={handleAuthorize} />;
       case 'live': return <LiveTutor onClose={() => setCurrentView('chat')} userProfile={userProfile} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} />;
-      default: return <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { if (checkLimit('game')) { incrementUsage('game'); setFullScreenGameData(data); } else { setLimitModalMessage("Hết lượt chơi game hôm nay."); setIsLimitModalOpen(true); } }} onAddNotification={handleAddNotification} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} />;
+      default: return <ChatInterface currentSessionId={currentSessionId} onSaveKnowledge={handleSaveKnowledge} messages={getCurrentMessages()} setMessages={setMessages} onPlayGame={(data) => { if (checkLimit('game')) { incrementUsage('game'); setFullScreenGameData(data); } else { setLimitModalMessage("Hết lượt chơi game hôm nay."); setIsLimitModalOpen(true); } }} onAddNotification={handleAddNotification} checkLimit={() => checkLimit('message')} incrementUsage={() => incrementUsage('message')} onToggleSidebar={() => setIsMobileMenuOpen(true)} onOpenProfile={() => setCurrentView('profile')} onApiError={handleApiError} />;
     }
   };
+
+  if (isAuthorized === null) return <div className="h-screen w-screen bg-slate-900 flex items-center justify-center"><Loader2 className="w-10 h-10 text-indigo-500 animate-spin" /></div>;
+
+  if (!isAuthorized) {
+    return <Gateway onAuthorize={handleAuthorize} />;
+  }
 
   return (
     <div className="flex h-[100dvh] bg-gray-100 overflow-hidden relative">

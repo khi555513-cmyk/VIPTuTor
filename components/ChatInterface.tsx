@@ -21,6 +21,7 @@ interface ChatInterfaceProps {
   incrementUsage: () => void;
   onToggleSidebar?: () => void;
   onOpenProfile?: () => void;
+  onApiError?: () => void;
 }
 
 const SUGGESTIONS = [
@@ -65,11 +66,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   checkLimit,
   incrementUsage,
   onToggleSidebar,
-  onOpenProfile
+  onOpenProfile,
+  onApiError
 }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isProcessingFile, setIsProcessingFile] = useState(false); // To show spinner during heavy file read
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
   const [mode, setMode] = useState<TutorMode>(TutorMode.GENERAL);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [showMobileModes, setShowMobileModes] = useState(false);
@@ -124,7 +126,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
-      const responseText = await generateTutorResponse(textToSend, userMessage.attachments || [], modeToUse);
+      const responseText = await generateTutorResponse(textToSend, userMessage.attachments || [], modeToUse, onApiError);
 
       let isGameData = false;
       let finalText = responseText;
@@ -180,10 +182,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   };
 
   const isTextFile = (file: File) => {
-    const textTypes = [
-      'text/', 'application/json', 'application/javascript', 
-      'application/x-javascript', 'application/typescript', 'application/xml'
-    ];
+    const textTypes = ['text/', 'application/json', 'application/javascript', 'application/x-javascript', 'application/typescript', 'application/xml'];
     const textExts = ['.md', '.ts', '.tsx', '.js', '.jsx', '.py', '.java', '.c', '.cpp', '.h', '.cs', '.php', '.rb', '.go', '.rs', '.swift', '.kt', '.sql', '.txt', '.csv', '.html', '.css'];
     return textTypes.some(t => file.type.startsWith(t)) || textExts.some(ext => file.name.toLowerCase().endsWith(ext));
   };
@@ -191,19 +190,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    
-    // Increased Limit: 150MB
     const MAX_SIZE = 150 * 1024 * 1024; 
-
     setIsProcessingFile(true);
-
     const processFile = async (file: File) => {
       if (file.size > MAX_SIZE) {
         alert(`File "${file.name}" quá lớn (${(file.size / 1024 / 1024).toFixed(2)}MB). Giới hạn là 150MB.`);
         return;
       }
-
-      // Word Document Handling (Quick text extraction)
       if (file.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
         return new Promise<void>((resolve) => {
           const reader = new FileReader();
@@ -218,8 +211,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           reader.readAsArrayBuffer(file);
         });
       }
-
-      // Text Files
       if (isTextFile(file)) {
         return new Promise<void>((resolve) => {
           const reader = new FileReader();
@@ -230,9 +221,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           reader.readAsText(file);
         });
       }
-
-      // Large Binary Files (Images/PDFs) - Read as Data URL
-      // Use Promise to prevent UI locking if we can, though FileReader is main thread.
       return new Promise<void>((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -244,15 +232,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         reader.readAsDataURL(file);
       });
     };
-
-    // Fix: Explicitly cast Array.from(files) as File[] to prevent 'unknown' type error.
     const fileList = Array.from(files) as File[];
-
-    // Process sequentially to keep UI responsive
     for (const file of fileList) {
       await processFile(file);
     }
-    
     setIsProcessingFile(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -297,8 +280,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   return (
     <div className="flex flex-col h-full bg-slate-50 relative">
-      {/* --- HEADER --- */}
-      {/* Desktop (md+) */}
+      {/* Header */}
       <div className="hidden md:flex h-16 border-b items-center justify-between px-6 bg-white/80 backdrop-blur-md z-20 shadow-sm shrink-0 sticky top-0">
         <div className="flex items-center space-x-3">
           <div className="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
@@ -319,17 +301,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Mobile Header (Compact) */}
       <div className="md:hidden h-14 bg-white/90 backdrop-blur-md border-b flex items-center justify-between px-3 relative z-30 shadow-sm">
         <div className="flex items-center gap-2">
           <button onClick={onToggleSidebar} className="text-gray-600 p-2 active:bg-gray-100 rounded-full transition-colors">
             <Menu className="w-6 h-6" />
           </button>
           <div className="relative">
-             <button 
-               onClick={() => setShowMobileModes(!showMobileModes)}
-               className="flex items-center gap-1 font-bold text-gray-800 text-lg active:opacity-70 transition-opacity"
-             >
+             <button onClick={() => setShowMobileModes(!showMobileModes)} className="flex items-center gap-1 font-bold text-gray-800 text-lg active:opacity-70 transition-opacity">
                VIP<span className="text-indigo-600">Tutor</span> <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showMobileModes ? 'rotate-180' : ''}`} />
              </button>
              {showMobileModes && (
@@ -350,35 +328,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
              )}
           </div>
         </div>
-        <button 
-          onClick={onOpenProfile}
-          className="p-2 text-indigo-600 bg-indigo-50 rounded-full active:scale-95 transition-transform hover:shadow-md border border-indigo-100"
-        >
+        <button onClick={onOpenProfile} className="p-2 text-indigo-600 bg-indigo-50 rounded-full active:scale-95 transition-transform hover:shadow-md border border-indigo-100">
            <Sparkles className="w-5 h-5" />
         </button>
       </div>
 
-      {/* --- CONTENT AREA --- */}
       <div className="flex-1 overflow-y-auto p-3 md:p-6 space-y-5 bg-slate-50 relative scroll-smooth pb-24 md:pb-32">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full animate-fade-in -mt-10 md:mt-0">
-             
-             {/* Mobile: Minimalist Welcome */}
              <div className="md:hidden flex flex-col items-center w-full">
                 <div className="w-20 h-20 bg-indigo-100 rounded-full flex items-center justify-center mb-6 animate-float shadow-lg shadow-indigo-200/50">
                     <GraduationCap className="w-10 h-10 text-indigo-600" />
                 </div>
-                <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">
-                   Hôm nay bạn muốn học gì?
-                </h2>
-                {/* Horizontal Scroll Suggestions */}
+                <h2 className="text-xl font-bold text-gray-800 mb-6 text-center">Hôm nay bạn muốn học gì?</h2>
                 <div className="flex overflow-x-auto gap-3 w-full px-4 pb-4 scrollbar-hide snap-x">
                    {SUGGESTIONS.map((s, idx) => (
-                      <button 
-                        key={idx}
-                        onClick={() => handleSendMessage(s.text, s.mode as TutorMode)}
-                        className="snap-center shrink-0 w-36 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-lg transition-all text-center flex flex-col items-center gap-3 active:scale-95"
-                      >
+                      <button key={idx} onClick={() => handleSendMessage(s.text, s.mode as TutorMode)} className="snap-center shrink-0 w-36 p-4 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-lg transition-all text-center flex flex-col items-center gap-3 active:scale-95">
                          <div className={`p-3 rounded-full ${s.bg}`}>
                             <s.icon className={`w-6 h-6 ${s.color}`} />
                          </div>
@@ -387,16 +352,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                    ))}
                 </div>
              </div>
-             
-             {/* Desktop: Full Welcome */}
              <div className="hidden md:flex flex-col items-center justify-center text-center mb-8 max-w-lg px-4 mt-4">
                 <div className="inline-flex items-center justify-center p-4 bg-gradient-to-tr from-indigo-500 to-purple-600 rounded-2xl mb-6 shadow-xl shadow-indigo-200 animate-float">
                   <Sparkles className="w-8 h-8 text-white" />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-800 mb-3 tracking-tight">Welcome to VIP Tutor</h2>
-                <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">
-                   Hệ thống gia sư AI cao cấp. Sẵn sàng giải bài tập, tạo đề thi và luyện tập tiếng Anh chuyên sâu.
-                </p>
+                <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">Hệ thống gia sư AI cao cấp. Sẵn sàng giải bài tập, tạo đề thi và luyện tập tiếng Anh chuyên sâu.</p>
              </div>
              <div className="hidden md:grid grid-cols-2 gap-4 w-full max-w-3xl px-4 pb-4">
                 {SUGGESTIONS.map((s, idx) => (
@@ -420,7 +381,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className={`relative max-w-[88%] md:max-w-[70%] rounded-[1.5rem] shadow-sm border px-1 ${msg.role === Role.USER ? 'bg-gradient-to-br from-[#8b5cf6] to-[#6366f1] text-white border-transparent rounded-br-none shadow-indigo-200' : 'bg-white border-gray-100 text-gray-800 rounded-bl-none shadow-gray-100'}`}>
                 {msg.attachments && msg.attachments.length > 0 && (
                   <div className="p-3 gap-2 flex flex-wrap">
-                    {msg.attachments.map((att, idx) => (<div key={idx} className="relative group transition-transform hover:scale-105">{renderAttachmentPreview(att)}</div>))}
+                    {msg.attachments.map((att, idx) => (<div key={idx} className="relative inline-block group shrink-0 transition-transform hover:scale-105">{renderAttachmentPreview(att)}</div>))}
                   </div>
                 )}
                 <div className="p-3 md:p-5 overflow-x-auto text-[15px] md:text-[16px] leading-relaxed font-sans">
@@ -465,10 +426,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* --- UNIFIED INPUT AREA (Mobile Style for Desktop) --- */}
       <div className="fixed bottom-4 left-0 right-0 md:left-64 z-40 px-3 md:px-0 pointer-events-none">
         <div className="max-w-4xl mx-auto w-full pointer-events-auto">
-           {/* Attachment Previews */}
            {attachments.length > 0 && (
             <div className="mb-2 mx-2 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-3 flex gap-3 overflow-x-auto animate-slide-up">
                {attachments.map((att, idx) => (
@@ -479,38 +438,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                ))}
             </div>
           )}
-
-          {/* Floating Pill Input Bar */}
           <div className="flex items-end gap-2 bg-white/90 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/50 rounded-[2rem] p-2 pr-3 transition-all focus-within:shadow-[0_8px_40px_rgb(99,102,241,0.2)] focus-within:border-indigo-200">
-             
-             {/* Upload Button */}
              <input type="file" multiple accept="image/*,.pdf,.doc,.docx" className="hidden" ref={fileInputRef} onChange={handleFileUpload} />
-             <button 
-               onClick={() => fileInputRef.current?.click()} 
-               className="w-10 h-10 md:w-11 md:h-11 bg-gray-50 hover:bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-all active:scale-95 shrink-0"
-               title="Tải ảnh/file (>100MB)"
-             >
+             <button onClick={() => fileInputRef.current?.click()} className="w-10 h-10 md:w-11 md:h-11 bg-gray-50 hover:bg-gray-100 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 transition-all active:scale-95 shrink-0" title="Tải ảnh/file (>100MB)">
                <Plus className="w-5 h-5 md:w-6 md:h-6" />
              </button>
-
-             {/* Text Area */}
-             <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-                placeholder={isProcessingFile ? "Đang xử lý file..." : mode === TutorMode.EXERCISE ? "Dán bài tập hoặc tải ảnh..." : "Hỏi tôi bất cứ điều gì..."}
-                disabled={isProcessingFile}
-                className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-3 text-gray-800 text-[15px] md:text-base placeholder-gray-400 min-h-[44px] max-h-32 leading-relaxed"
-                rows={1}
-             />
-
-             {/* Send Button */}
-             <button 
-               onClick={() => handleSendMessage()}
-               disabled={(!input.trim() && attachments.length === 0) || isLoading || isProcessingFile}
-               className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90 shrink-0 mb-0.5 ${(!input.trim() && attachments.length === 0) || isLoading || isProcessingFile ? 'bg-gray-300 shadow-none cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:shadow-indigo-300 hover:scale-105'}`}
-             >
+             <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} placeholder={isProcessingFile ? "Đang xử lý file..." : mode === TutorMode.EXERCISE ? "Dán bài tập hoặc tải ảnh..." : "Hỏi tôi bất cứ điều gì..."} disabled={isProcessingFile} className="flex-1 bg-transparent border-none focus:ring-0 resize-none py-3 text-gray-800 text-[15px] md:text-base placeholder-gray-400 min-h-[44px] max-h-32 leading-relaxed" rows={1} />
+             <button onClick={() => handleSendMessage()} disabled={(!input.trim() && attachments.length === 0) || isLoading || isProcessingFile} className={`w-10 h-10 md:w-11 md:h-11 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90 shrink-0 mb-0.5 ${(!input.trim() && attachments.length === 0) || isLoading || isProcessingFile ? 'bg-gray-300 shadow-none cursor-not-allowed' : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:shadow-indigo-300 hover:scale-105'}`}>
                {isLoading || isProcessingFile ? <Loader2 className="w-5 h-5 animate-spin" /> : <ArrowRight className="w-5 h-5 md:w-6 md:h-6 stroke-[3]" />}
              </button>
           </div>
@@ -519,7 +453,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           </div>
         </div>
       </div>
-
     </div>
   );
 };

@@ -2,11 +2,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileText, Clock, Upload, CheckCircle, AlertCircle, 
-  Printer, GraduationCap, X, BookOpen, Brain, Play, Maximize2, Download
+  Printer, GraduationCap, X, BookOpen, Brain, Play, Maximize2, Download, ArrowLeft, ArrowRight, Layout
 } from 'lucide-react';
 import { TestConfig, ExamData, ExamResult } from '../types';
 import { GoogleGenAI } from "@google/genai";
-import mammoth from 'mammoth';
 import { TEST_GENERATOR_PROMPT, TEST_GRADER_PROMPT } from '../constants';
 import MarkdownRenderer from './MarkdownRenderer';
 import confetti from 'canvas-confetti';
@@ -25,21 +24,21 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
   onApiError
 }) => {
   const [step, setStep] = useState<'config' | 'generating' | 'preview' | 'countdown' | 'testing' | 'grading' | 'result'>('config');
-  const [config, setConfig] = useState<TestConfig>({ gradeLevel: 'Lớp 12', examFormat: 'THPT Quốc Gia', topics: '', duration: 60, referenceContent: '' });
-  const [uploadedFileName, setUploadedFileName] = useState<string>('');
+  const [config, setConfig] = useState<TestConfig>({ gradeLevel: 'Lớp 12', examFormat: 'THPT Quốc Gia', topics: '', duration: 45, referenceContent: '' });
   const [examData, setExamData] = useState<ExamData | null>(null);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [countdown, setCountdown] = useState<number>(3);
   const [result, setResult] = useState<ExamResult | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Split Screen Ref
+  const leftPanelRef = useRef<HTMLDivElement>(null);
 
   const startGeneration = async () => {
     if (!checkLimit()) { alert("🔒 Hết lượt tạo đề thi!"); return; }
     setStep('generating');
     incrementUsage();
     try {
-      // CRITICAL: Always use process.env.API_KEY directly and create instance right before calling.
       const apiKey = process.env.API_KEY;
       if (!apiKey) throw new Error("API Key not found");
 
@@ -50,7 +49,6 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
         contents: { parts: [{ text: prompt }] },
         config: { systemInstruction: TEST_GENERATOR_PROMPT, temperature: 0.5 }
       });
-      // Access .text property directly.
       const text = response.text || "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -61,8 +59,7 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
       } else { throw new Error("Could not parse exam JSON"); }
     } catch (e: any) {
       console.error(e);
-      if ((e?.message?.includes("Requested entity was not found") || e?.status === 404 || e?.status === 403) && onApiError) { onApiError(); }
-      alert("Lỗi khi tạo đề thi. Vui lòng kiểm tra lại API Key.");
+      alert("Lỗi khi tạo đề thi.");
       setStep('config');
     }
   };
@@ -73,8 +70,6 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     setCountdown(3);
     setStep('countdown');
   };
-
-  const handleExitFullScreen = () => { if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); } };
 
   useEffect(() => {
     if (step === 'countdown') {
@@ -94,20 +89,18 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
   const formatTime = (seconds: number) => { const m = Math.floor(seconds / 60); const s = seconds % 60; return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; };
 
   const submitExam = async () => {
-    handleExitFullScreen();
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); }
     setStep('grading');
     try {
       const apiKey = process.env.API_KEY;
       if (!apiKey) throw new Error("API Key not found");
-
       const ai = new GoogleGenAI({ apiKey: apiKey });
-      const prompt = `Dữ liệu bài làm: ${JSON.stringify({ examData, userAnswers })}. Chấm điểm theo format JSON.`;
+      const prompt = `Dữ liệu bài làm: ${JSON.stringify({ examData, userAnswers })}. Chấm điểm JSON.`;
       const response = await ai.models.generateContent({
         model: 'gemini-3-pro-preview', 
         contents: { parts: [{ text: prompt }] },
         config: { systemInstruction: TEST_GRADER_PROMPT, temperature: 0.2 }
       });
-      // Access .text property directly.
       const text = response.text || "";
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -117,45 +110,49 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
         if (parsed.score >= 8) { confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } }); }
       } else { throw new Error("Grading JSON failed"); }
     } catch (e: any) {
-      console.error(e);
-      if ((e?.message?.includes("Requested entity was not found") || e?.status === 404 || e?.status === 403) && onApiError) { onApiError(); }
       alert("Lỗi khi chấm bài.");
       setStep('result'); 
     }
   };
 
-  const handleExportWord = () => {
-    if (!examData) return;
-    const content = document.getElementById('exam-paper-content')?.innerHTML;
-    const preHtml = "<html><head><meta charset='utf-8'></head><body>";
-    const postHtml = "</body></html>";
-    const html = preHtml + content + postHtml;
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${examData.title}.doc`;
-    link.click();
-  };
-
-  const handlePrintPDF = () => { window.print(); };
-
+  // --- CONFIG STEP ---
   if (step === 'config') {
     return (
-      <div className="h-full bg-slate-50 overflow-y-auto p-4 md:p-6 flex flex-col items-center">
-        <div className="w-full max-w-3xl bg-white rounded-2xl shadow-xl p-4 md:p-8 animate-fade-in my-auto">
-          <div className="flex items-center gap-4 mb-6 md:mb-8 border-b pb-4 md:pb-6">
-            <div className="bg-indigo-600 p-3 md:p-4 rounded-xl text-white shadow-lg shrink-0"> <GraduationCap className="w-6 h-6 md:w-8 md:h-8" /> </div>
-            <div> <h1 className="text-xl md:text-2xl font-bold text-gray-800 leading-tight">Hệ Thống Luyện Thi Pro</h1> <p className="text-gray-500 text-sm md:text-base">Thiết kế đề thi chuẩn 99% - Phân tích chuyên sâu</p> </div>
+      <div className="h-full bg-slate-50 flex flex-col items-center justify-center p-4 animate-fade-in">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white">
+            <h1 className="text-2xl font-bold flex items-center gap-3">
+               <GraduationCap className="w-8 h-8" /> Luyện Thi Chuyên Sâu
+            </h1>
+            <p className="opacity-90 text-sm mt-1">Hệ thống tạo đề thi chuẩn Format mới nhất</p>
           </div>
-          <div className="space-y-4 md:space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-               <div> <label className="block text-sm font-semibold text-gray-700 mb-1.5">Trình độ / Lớp</label> <select value={config.gradeLevel} onChange={(e) => setConfig({...config, gradeLevel: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-lg"> <option>Lớp 9 (Luyện thi vào 10)</option> <option>Lớp 12 (Tốt nghiệp THPT)</option> <option>TOEIC</option> <option>IELTS</option> </select> </div>
-               <div> <label className="block text-sm font-semibold text-gray-700 mb-1.5">Định dạng đề thi</label> <input type="text" value={config.examFormat} onChange={(e) => setConfig({...config, examFormat: e.target.value})} className="w-full p-2.5 border border-gray-200 rounded-lg" /> </div>
+          
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+               <div> 
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Trình độ mục tiêu</label> 
+                  <select value={config.gradeLevel} onChange={(e) => setConfig({...config, gradeLevel: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none"> 
+                     <option>Lớp 9 (Vào 10)</option> 
+                     <option>Lớp 12 (THPT QG)</option> 
+                     <option>TOEIC (450-990)</option> 
+                     <option>IELTS (Academic)</option> 
+                  </select> 
+               </div>
+               <div> 
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Thời gian (Phút)</label> 
+                  <input type="number" value={config.duration} onChange={(e) => setConfig({...config, duration: parseInt(e.target.value)})} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none" /> 
+               </div>
+               <div className="md:col-span-2"> 
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5">Chủ đề tập trung (Tùy chọn)</label> 
+                  <input type="text" placeholder="VD: Mệnh đề quan hệ, Từ vựng môi trường..." value={config.topics} onChange={(e) => setConfig({...config, topics: e.target.value})} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl font-medium focus:ring-2 focus:ring-indigo-500 outline-none" /> 
+               </div>
             </div>
-            <div className="pt-4 flex flex-col md:flex-row gap-3 md:gap-4">
-              <button onClick={onBack} className="w-full md:w-auto px-6 py-3 text-gray-600 font-medium hover:bg-gray-100 rounded-xl"> Hủy bỏ </button>
-              <button onClick={startGeneration} className="w-full md:flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2"> <Brain className="w-5 h-5" /> Thiết Kế Đề Thi Ngay </button>
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={onBack} className="flex-1 py-3.5 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors">Hủy</button>
+              <button onClick={startGeneration} className="flex-[2] py-3.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2">
+                 <Brain className="w-5 h-5" /> Bắt Đầu Tạo Đề
+              </button>
             </div>
           </div>
         </div>
@@ -163,69 +160,175 @@ const TestPrepSystem: React.FC<TestPrepSystemProps> = ({
     );
   }
 
+  // --- LOADING STEPS ---
   if (step === 'generating' || step === 'grading') {
-    return ( <div className="h-full bg-slate-50 flex flex-col items-center justify-center p-6"> <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full animate-fade-in"> <div className="relative w-20 h-20 mx-auto mb-6"> <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div> <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div> </div> <h2 className="text-xl font-bold text-gray-800 mb-2"> {step === 'generating' ? 'Đang Thiết Kế Đề Thi...' : 'AI Đang Chấm Bài...'} </h2> </div> </div> );
+    return (
+      <div className="h-full bg-white flex flex-col items-center justify-center p-6 animate-fade-in">
+        <div className="w-24 h-24 relative mb-6">
+           <div className="absolute inset-0 rounded-full border-4 border-gray-100"></div>
+           <div className="absolute inset-0 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin"></div>
+           <Brain className="absolute inset-0 m-auto text-indigo-600 w-8 h-8 animate-pulse" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">
+           {step === 'generating' ? 'AI Đang Thiết Kế Đề Thi...' : 'Đang Chấm Điểm & Phân Tích...'}
+        </h2>
+        <p className="text-gray-500 text-sm">Vui lòng đợi trong giây lát, không tắt trình duyệt.</p>
+      </div>
+    );
   }
 
-  if (step === 'countdown') { return ( <div className="fixed inset-0 z-50 bg-indigo-900 flex items-center justify-center"> <div className="text-white text-9xl font-black animate-bounce"> {countdown} </div> </div> ); }
+  if (step === 'countdown') {
+    return (
+      <div className="fixed inset-0 z-[100] bg-indigo-900 flex items-center justify-center">
+        <div className="text-white text-[10rem] font-black animate-ping">{countdown}</div>
+      </div>
+    ); 
+  }
 
-  const isPreviewMode = step === 'preview';
-  const isTestingMode = step === 'testing';
+  // --- TESTING & RESULT MODES (SPLIT SCREEN) ---
   const isResultMode = step === 'result';
+  const isPreview = step === 'preview';
 
   return (
-    <div className={`h-full bg-gray-100 overflow-y-auto flex flex-col items-center relative ${isTestingMode ? 'bg-slate-800' : ''}`}>
-      {isPreviewMode && (
-         <div className="sticky top-0 z-40 w-full bg-white border-b px-6 py-4 shadow-sm flex justify-between items-center animate-fade-in">
-            <div className="flex items-center gap-3"> <div className="bg-indigo-100 p-2 rounded-lg"> <FileText className="w-6 h-6 text-indigo-600" /> </div> <h2 className="font-bold text-gray-800">Xem Trước Đề Thi</h2> </div>
-            <div className="flex gap-2"> <button onClick={handleExportWord} className="px-3 py-2 bg-blue-50 text-blue-700 rounded-xl font-medium text-sm"> Word </button> <button onClick={handleStartExam} className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold shadow-lg animate-pulse text-sm"> Làm Bài </button> </div>
+    <div className="h-full bg-gray-100 flex flex-col overflow-hidden relative">
+      
+      {/* Header */}
+      <div className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0 shadow-sm z-20">
+         <div className="flex items-center gap-3 overflow-hidden">
+            <button onClick={onBack} className="p-2 hover:bg-gray-100 rounded-full"><ArrowLeft className="w-5 h-5 text-gray-600" /></button>
+            <h2 className="font-bold text-gray-800 truncate">{examData?.title}</h2>
          </div>
-      )}
-      {!isPreviewMode && (
-        <div className="sticky top-0 z-40 w-full bg-slate-900 text-white px-6 py-3 shadow-md flex justify-between items-center">
-           <div className="flex items-center gap-4"> <span className="font-bold text-lg">{examData?.title}</span> {isTestingMode && ( <div className="flex items-center gap-2 px-3 py-1 bg-slate-700 rounded-full font-mono font-bold text-sm"> <Clock className="w-4 h-4" /> {formatTime(timeLeft)} </div> )} </div>
-           <div className="flex gap-3"> {isResultMode && ( <button onClick={onBack} className="px-3 py-1.5 bg-gray-800 rounded-lg text-sm border border-gray-600"> Thoát </button> )} {isTestingMode && ( <button onClick={submitExam} className="bg-green-600 text-white px-6 py-1.5 rounded-lg font-bold shadow-lg text-sm"> Nộp Bài </button> )} </div>
-        </div>
-      )}
-      {isResultMode && result && (
-        <div className="w-full max-w-5xl mt-6 bg-white rounded-xl shadow-lg border-t-4 border-indigo-600 p-6 animate-fade-in mx-4">
-           <div className="flex gap-6"> <div className="text-left"> <div className="inline-block p-4 rounded-full bg-indigo-50 border-4 border-indigo-100 mb-2"> <span className="text-4xl font-black text-indigo-700">{result.score}</span> </div> <p className="font-bold text-gray-800">{result.correctCount}/{result.totalQuestions} Câu đúng</p> </div> <div className="flex-1 space-y-4"> <div className="bg-gray-50 p-4 rounded-lg border border-gray-200"> <h4 className="font-bold text-gray-800 flex items-center gap-2 mb-1"> <GraduationCap className="w-5 h-5 text-indigo-600" /> Lời phê giáo viên: </h4> <p className="text-gray-700 italic">"{result.teacherComment}"</p> </div> </div> </div>
-        </div>
-      )}
-      <div id="exam-paper-content" className={`w-full max-w-5xl mx-auto bg-white shadow-md my-8 p-14 text-gray-900 leading-relaxed font-serif text-justify ${isPreviewMode ? 'pointer-events-none select-none' : ''}`}>
-        <div className="border-b-2 border-black pb-4 mb-8 text-center"> <h1 className="text-2xl font-bold uppercase mb-2">{examData?.title}</h1> <p className="italic font-medium text-gray-700">{examData?.subtitle}</p> </div>
-        {examData?.sections.map((section, sIdx) => (
-          <div key={sIdx} className="mb-10 section-container">
-            <h2 className="font-bold text-lg mb-4 uppercase text-black border-b border-gray-300 pb-1"> {section.title} </h2>
-            {section.passageContent && ( <div className="reading-box bg-gray-50 border border-gray-300 p-6 mb-6"> <MarkdownRenderer content={section.passageContent} /> </div> )}
-            <div className="space-y-6">
-              {section.questions.map((q, qIdx) => {
-                const questionNumber = section.questions.reduce((acc, curr, currIdx) => currIdx < qIdx ? acc + 1 : acc, 0) + examData.sections.slice(0, sIdx).reduce((acc, s) => acc + s.questions.length, 0) + 1;
-                const userAnswer = userAnswers[questionNumber];
-                const isCorrect = isResultMode ? userAnswer === q.correctAnswer : null;
-                return (
-                  <div key={q.id} className="relative pl-1">
-                    {isResultMode && ( <div className="absolute -left-8 top-1"> {isCorrect ? ( <CheckCircle className="w-6 h-6 text-green-600" /> ) : ( <X className="w-6 h-6 text-red-600" /> )} </div> )}
-                    <div className="flex gap-2 mb-3 items-baseline"> <span className="font-bold text-lg">Q.{questionNumber}:</span> <div className="flex-1 text-lg"> <MarkdownRenderer content={q.content} /> </div> </div>
-                    {q.type === 'multiple_choice' && q.options && (
-                      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 ml-2">
-                        {q.options.map((opt, oIdx) => {
-                          const key = String.fromCharCode(65 + oIdx); 
-                          const isSelected = userAnswer === key;
-                          const isKeyCorrect = q.correctAnswer === key;
-                          let className = "flex items-start gap-2 p-1.5 rounded cursor-pointer ";
-                          if (!isResultMode) { className += isSelected ? "bg-indigo-50 font-bold text-indigo-900" : "hover:bg-gray-50"; } 
-                          else { if (isKeyCorrect) className += "bg-green-100 text-green-900 font-bold "; else if (isSelected && !isKeyCorrect) className += "bg-red-100 text-red-900 line-through "; else className += "opacity-60 "; }
-                          return ( <div key={oIdx} onClick={() => !isResultMode && !isPreviewMode && handleAnswerChange(questionNumber, key)} className={className} > <span className={`w-6 h-6 rounded-full border border-gray-400 flex items-center justify-center text-xs font-bold ${isSelected && !isResultMode ? 'bg-indigo-600 text-white' : 'bg-transparent text-gray-800'}`}> {key} </span> <span className="text-base pt-0.5">{opt}</span> </div> );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+         
+         {step === 'testing' && (
+           <div className={`px-4 py-1.5 rounded-full font-mono font-bold text-lg border ${timeLeft < 300 ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
+              {formatTime(timeLeft)}
+           </div>
+         )}
+
+         <div className="flex gap-2">
+            {isPreview && (
+              <button onClick={handleStartExam} className="px-5 py-2 bg-indigo-600 text-white rounded-lg font-bold shadow-md hover:bg-indigo-700 active:scale-95 text-sm flex items-center gap-2">
+                 <Play className="w-4 h-4" /> Làm Bài
+              </button>
+            )}
+            {step === 'testing' && (
+              <button onClick={() => { if(confirm("Nộp bài ngay?")) submitExam(); }} className="px-5 py-2 bg-green-600 text-white rounded-lg font-bold shadow-md hover:bg-green-700 active:scale-95 text-sm">
+                 Nộp Bài
+              </button>
+            )}
+            {isResultMode && (
+              <div className="flex items-center gap-2">
+                 <div className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-xl border border-indigo-200">{result?.score}đ</div>
+              </div>
+            )}
+         </div>
+      </div>
+
+      {/* Main Split Content */}
+      <div className="flex-1 flex overflow-hidden">
+         {/* LEFT PANEL: Reading Passage / Reference (Optional) */}
+         {examData?.sections.some(s => s.passageContent) && (
+            <div className="w-1/2 h-full overflow-y-auto border-r border-gray-200 bg-white p-6 md:p-8 custom-scrollbar hidden md:block">
+               <div className="max-w-2xl mx-auto">
+                 <h3 className="font-bold text-gray-400 text-xs uppercase mb-4 sticky top-0 bg-white py-2 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" /> Tài liệu đọc hiểu
+                 </h3>
+                 {examData.sections.map((sec, idx) => (
+                    sec.passageContent && (
+                       <div key={idx} className="mb-8 prose prose-slate prose-sm max-w-none">
+                          <h4 className="font-bold text-gray-800 mb-2">{sec.title}</h4>
+                          <MarkdownRenderer content={sec.passageContent} />
+                          <hr className="my-6 border-gray-100"/>
+                       </div>
+                    )
+                 ))}
+               </div>
             </div>
-          </div>
-        ))}
+         )}
+
+         {/* RIGHT PANEL: Questions */}
+         <div className={`h-full overflow-y-auto bg-gray-50 p-4 md:p-8 custom-scrollbar ${examData?.sections.some(s => s.passageContent) ? 'w-full md:w-1/2' : 'w-full max-w-4xl mx-auto'}`}>
+            {isResultMode && result && (
+               <div className="mb-8 bg-white rounded-xl p-6 border border-indigo-100 shadow-sm animate-fade-in">
+                  <h3 className="font-bold text-gray-800 mb-2 flex items-center gap-2"><GraduationCap className="w-5 h-5 text-indigo-600"/> Nhận xét của giáo viên</h3>
+                  <p className="text-gray-600 italic text-sm leading-relaxed border-l-4 border-indigo-500 pl-4 py-1">{result.teacherComment}</p>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                     <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                        <span className="text-xs font-bold text-green-700 uppercase">Số câu đúng</span>
+                        <p className="text-xl font-black text-green-800">{result.correctCount}/{result.totalQuestions}</p>
+                     </div>
+                     <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                        <span className="text-xs font-bold text-blue-700 uppercase">Điểm số</span>
+                        <p className="text-xl font-black text-blue-800">{result.score}</p>
+                     </div>
+                  </div>
+               </div>
+            )}
+
+            {examData?.sections.map((section, sIdx) => (
+               <div key={sIdx} className="mb-8">
+                  <div className="flex items-center gap-3 mb-4">
+                     <span className="bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded uppercase">Part {sIdx + 1}</span>
+                     <h3 className="font-bold text-gray-800">{section.title}</h3>
+                  </div>
+
+                  {/* Mobile-only passage view if needed, or inline passage */}
+                  {(!examData.sections.some(s => s.passageContent) || window.innerWidth < 768) && section.passageContent && (
+                     <div className="bg-white p-4 rounded-xl border border-gray-200 mb-6 text-sm text-gray-700 shadow-sm md:hidden">
+                        <MarkdownRenderer content={section.passageContent} />
+                     </div>
+                  )}
+
+                  <div className="space-y-4">
+                     {section.questions.map((q, qIdx) => {
+                        const globalQIdx = examData.sections.slice(0, sIdx).reduce((acc, s) => acc + s.questions.length, 0) + qIdx + 1;
+                        const userAnswer = userAnswers[globalQIdx];
+                        const isCorrect = isResultMode ? userAnswer === q.correctAnswer : null;
+
+                        return (
+                           <div key={q.id} className={`bg-white p-4 rounded-xl border transition-all ${isResultMode ? (isCorrect ? 'border-green-200 ring-1 ring-green-200' : 'border-red-200 ring-1 ring-red-200') : 'border-gray-200 hover:border-indigo-200 shadow-sm'}`}>
+                              <div className="flex gap-3 mb-3">
+                                 <span className="shrink-0 w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-xs font-bold text-gray-600 mt-0.5">{globalQIdx}</span>
+                                 <div className="text-sm text-gray-800 font-medium leading-relaxed">
+                                    <MarkdownRenderer content={q.content} />
+                                 </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-9">
+                                 {q.options?.map((opt, oIdx) => {
+                                    const key = String.fromCharCode(65 + oIdx);
+                                    const isSelected = userAnswer === key;
+                                    const isKeyCorrect = q.correctAnswer === key;
+                                    
+                                    let btnClass = "border-gray-100 hover:bg-gray-50 text-gray-600";
+                                    if (!isResultMode && isSelected) btnClass = "border-indigo-500 bg-indigo-50 text-indigo-700 font-bold ring-1 ring-indigo-500";
+                                    if (isResultMode) {
+                                       if (isKeyCorrect) btnClass = "border-green-500 bg-green-50 text-green-800 font-bold ring-1 ring-green-500";
+                                       else if (isSelected) btnClass = "border-red-300 bg-red-50 text-red-800 line-through opacity-70";
+                                       else btnClass = "border-gray-100 opacity-50";
+                                    }
+
+                                    return (
+                                       <button 
+                                          key={oIdx}
+                                          disabled={isResultMode || isPreview}
+                                          onClick={() => handleAnswerChange(globalQIdx, key)}
+                                          className={`text-left text-sm p-3 rounded-lg border transition-all flex items-start gap-2 ${btnClass}`}
+                                       >
+                                          <span className="font-bold text-[10px] uppercase shrink-0 mt-0.5">{key}.</span>
+                                          <span>{opt}</span>
+                                       </button>
+                                    );
+                                 })}
+                              </div>
+                           </div>
+                        );
+                     })}
+                  </div>
+               </div>
+            ))}
+         </div>
       </div>
     </div>
   );

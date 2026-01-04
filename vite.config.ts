@@ -9,16 +9,18 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    chunkSizeWarningLimit: 2000,
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 3000,
     rollupOptions: {
       input: {
         main: './index.html'
       },
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'lucide-react'],
-          ai: ['@google/genai'],
-          utils: ['marked', 'dompurify', 'mammoth', 'canvas-confetti']
+          'react-core': ['react', 'react-dom'],
+          'ui-icons': ['lucide-react'],
+          'google-ai': ['@google/genai'],
+          'text-processing': ['marked', 'dompurify', 'mammoth']
         }
       }
     }
